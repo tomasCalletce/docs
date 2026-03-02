@@ -5,7 +5,7 @@ description: "Integra Proof con tu tienda VTEX IO. Tu technical account manager 
 
 ## Resumen
 
-**VTEX IO** (también llamado Store Framework o VTEX Cloud) es la arquitectura moderna de VTEX. Usa un sistema de **apps** y componentes. La integración con Proof se hace a través de una **Pixel App** para capturar los clics, y un postback S2S para reportar las conversiones.
+**VTEX IO** (también llamado Store Framework o VTEX Cloud) es la arquitectura moderna de VTEX. Usa un sistema de **apps** y componentes. La integración con Proof se hace a través de una **Pixel App** para capturar el Transaction ID, y un postback S2S para reportar las conversiones.
 
 <Info>
   Tu technical account manager te guía en todo el proceso de integración. Los ejemplos de código en esta página son referencia para tu equipo técnico.
@@ -114,38 +114,19 @@ Configura un webhook en VTEX para que notifique a tu servidor cuando se completa
 ### Disparar el postback desde tu servidor
 
 ```javascript
-// En tu servidor
-var VTEX_ACCOUNT = 'TU_CUENTA_VTEX';
+// Disparar postback a Proof con los datos de la orden
+const params = new URLSearchParams({
+  nid: '3935',
+  transaction_id: efTid,        // El Transaction ID guardado en marketingData.utmCampaign
+  amount: String(orderTotal),    // Monto de la venta
+  adv_event_id: orderId          // Número de orden
+});
 
-const handleOrder = async (orderId) => {
-  // Obtener detalles de la orden vía API de VTEX
-  const order = await fetch(
-    `https://${VTEX_ACCOUNT}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`,
-    {
-      headers: {
-        'X-VTEX-API-AppKey': 'TU_APP_KEY',
-        'X-VTEX-API-AppToken': 'TU_APP_TOKEN'
-      }
-    }
-  ).then(r => r.json());
-
-  const efTid = order.marketingData?.utmCampaign;
-  if (!efTid) return; // No es tráfico de Proof
-
-  // Disparar postback a Proof
-  const params = new URLSearchParams({
-    nid: '3935',
-    transaction_id: efTid,
-    amount: String(order.value / 100),
-    adv_event_id: orderId
-  });
-
-  await fetch(`https://www.track.proof.nilho.com/?${params}`);
-};
+await fetch(`https://www.track.proof.nilho.com/?${params}`);
 ```
 
 <Info>
-  VTEX almacena los montos en **centavos**. Divide por 100 antes de enviar a Proof. Ejemplo: `150000` centavos = `1500.00` en la moneda local.
+  Recuerda que VTEX almacena los montos en **centavos**. Divide por 100 antes de enviar el `amount` a Proof.
 </Info>
 
 ---
@@ -173,7 +154,7 @@ const handleOrder = async (orderId) => {
 ## Solución de problemas
 
 <Accordion title="La Pixel App no se ejecuta">
-  Verifica que la app está correctamente instalada con `vtex list`. Asegúrate de que el `manifest.json` tiene los builders y policies correctos.
+  Verifica que la app está correctamente instalada con `vtex list`. Asegúrate de que el `manifest.json` tiene los builders correctos.
 </Accordion>
 
 <Accordion title="Las conversiones no aparecen en Proof">
