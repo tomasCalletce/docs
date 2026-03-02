@@ -5,7 +5,7 @@ description: "Integra Proof con tu frontend desacoplado de VTEX. Tu technical ac
 
 ## Resumen
 
-**VTEX Headless** es una arquitectura donde el frontend es una aplicación separada que se comunica con VTEX a través de APIs. Como tienes control total del código, la integración con Proof se hace cargando el SDK para capturar clics y usando un postback S2S para reportar conversiones.
+**VTEX Headless** es una arquitectura donde el frontend es una aplicación separada que se comunica con VTEX a través de APIs. Como tienes control total del código, la integración con Proof se hace capturando el Transaction ID en el frontend y reportando conversiones vía postback S2S.
 
 <Info>
   Tu technical account manager te guía en todo el proceso de integración. Los ejemplos de código en esta página son referencia para tu equipo técnico.
@@ -20,28 +20,23 @@ description: "Integra Proof con tu frontend desacoplado de VTEX. Tu technical ac
 
 ---
 
-## Paso 1: Capturar el clic
+## Paso 1: Capturar el Transaction ID
 
-Cuando un usuario llega desde un tracking link, la URL contiene un **Transaction ID** que identifica al creador. Necesitas capturarlo y guardarlo en una cookie.
+Cuando un usuario llega desde un tracking link, la URL contiene un parámetro `_ef_transaction_id` que identifica al creador. Necesitas capturarlo y guardarlo en una cookie.
 
-Incluye el SDK de Proof en tu layout principal (el componente que carga en todas las páginas):
+En tu layout principal (el componente que carga en todas las páginas), agrega la lógica para capturar el parámetro:
 
-```html
-<script src="https://www.track.proof.nilho.com/scripts/sdk/everflow.js"></script>
-<script>
-  EF.click({
-    offer_id: EF.urlParameter('oid'),
-    affiliate_id: EF.urlParameter('affid'),
-    transaction_id: EF.urlParameter('_ef_transaction_id')
-  });
-</script>
+```javascript
+// Capturar el Transaction ID del tracking link y guardarlo en una cookie
+var params = new URLSearchParams(window.location.search);
+var efTid = params.get('_ef_transaction_id');
+if (efTid) {
+  var expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = 'ef_tid=' + efTid + '; path=/; expires=' + expires;
+}
 ```
 
-Si tu frontend es una Single Page Application, asegúrate de que este script se ejecute al cargar la primera página. El SDK se encarga de guardar el Transaction ID en una cookie automáticamente.
-
-<Tip>
-  Si cargar el SDK en todas las páginas no es viable, tu equipo puede capturar el Transaction ID manualmente leyendo el parámetro `_ef_transaction_id` de la URL y guardándolo en una cookie.
-</Tip>
+Este código se ejecuta una vez al cargar la primera página. Si el usuario llegó desde un tracking link, captura el Transaction ID y lo guarda en una cookie con expiración de 30 días.
 
 ---
 
@@ -89,13 +84,15 @@ Configura tu servidor para recibir notificaciones de VTEX cuando se completa una
 ```javascript
 // En tu servidor
 async function handleVtexOrder(orderId) {
+  var VTEX_ACCOUNT = 'TU_CUENTA_VTEX';
+
   // Obtener detalles de la orden de VTEX
   const order = await fetch(
     `https://${VTEX_ACCOUNT}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`,
     {
       headers: {
-        'X-VTEX-API-AppKey': process.env.VTEX_APP_KEY,
-        'X-VTEX-API-AppToken': process.env.VTEX_APP_TOKEN
+        'X-VTEX-API-AppKey': 'TU_APP_KEY',
+        'X-VTEX-API-AppToken': 'TU_APP_TOKEN'
       }
     }
   ).then(r => r.json());
@@ -142,7 +139,7 @@ async function handleVtexOrder(orderId) {
 ## Solución de problemas
 
 <Accordion title="El Transaction ID se pierde durante la navegación">
-  Asegúrate de que la cookie `ef_tid` se está creando correctamente. Si tu frontend usa Server Side Rendering, la cookie podría no estar disponible en el primer render del servidor. El SDK debe ejecutarse del lado del cliente.
+  Asegúrate de que la cookie `ef_tid` se está creando correctamente. Si tu frontend usa Server Side Rendering, la cookie podría no estar disponible en el primer render del servidor. El script de captura debe ejecutarse del lado del cliente.
 </Accordion>
 
 <Accordion title="Las conversiones no aparecen en Proof">

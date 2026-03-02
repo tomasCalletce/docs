@@ -20,24 +20,24 @@ description: "Integra Proof con tu tienda VTEX Legacy. Tu technical account mana
 
 ---
 
-## Paso 1: Capturar el clic
+## Paso 1: Capturar el Transaction ID
 
-Cuando un usuario llega desde un tracking link, la URL contiene un **Transaction ID** que identifica al creador. Necesitas capturarlo y guardarlo en una cookie para no perderlo cuando el usuario navega tu tienda.
+Cuando un usuario llega desde un tracking link, la URL contiene un parámetro `_ef_transaction_id` que identifica al creador. Necesitas capturarlo y guardarlo en una cookie para no perderlo cuando el usuario navega tu tienda.
 
 En el CMS de VTEX, edita el **template del header** que se incluye en todas las páginas. Agrega antes del cierre de `</head>`:
 
 ```html
-<script src="https://www.track.proof.nilho.com/scripts/sdk/everflow.js"></script>
 <script>
-  EF.click({
-    offer_id: EF.urlParameter('oid'),
-    affiliate_id: EF.urlParameter('affid'),
-    transaction_id: EF.urlParameter('_ef_transaction_id')
-  });
+  // Capturar el Transaction ID del tracking link y guardarlo en una cookie
+  var params = new URLSearchParams(window.location.search);
+  var efTid = params.get('_ef_transaction_id');
+  if (efTid) {
+    document.cookie = 'ef_tid=' + efTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
+  }
 </script>
 ```
 
-Esto carga el SDK de Proof en cada página. Si el usuario llegó desde un tracking link, el SDK captura el Transaction ID y lo guarda automáticamente en una cookie.
+Este script se ejecuta en cada página. Si el usuario llegó desde un tracking link, captura el Transaction ID y lo guarda en una cookie con expiración de 30 días.
 
 ---
 
@@ -45,26 +45,32 @@ Esto carga el SDK de Proof en cada página. Si el usuario llegó desde un tracki
 
 Para que el postback funcione, el Transaction ID debe quedar guardado en los datos de la orden de VTEX. Esto se hace a través del campo `marketingData` del checkout.
 
-En el checkout de VTEX, agrega un script que lea la cookie y la pase al `orderForm`:
+En el checkout de VTEX, agrega un script que lea la cookie y la pase al `orderForm` antes de que el usuario complete la compra:
 
-```javascript
-var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
-var efTid = match ? match[1] : null;
+```html
+<script>
+  // Leer el Transaction ID de la cookie
+  var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
+  var efTid = match ? match[1] : null;
 
-if (efTid) {
-  fetch('/api/checkout/pub/orderForm/' + orderFormId + '/attachments/marketingData', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      utmSource: 'proof',
-      utmCampaign: efTid
-    })
-  });
-}
+  if (efTid) {
+    // Obtener el orderFormId del checkout actual
+    var orderFormId = vtxjs.checkout.orderFormId; // VTEX Legacy expone esto globalmente
+
+    fetch('/api/checkout/pub/orderForm/' + orderFormId + '/attachments/marketingData', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        utmSource: 'proof',
+        utmCampaign: efTid
+      })
+    });
+  }
+</script>
 ```
 
 <Warning>
-  Reemplaza `orderFormId` con el ID del orderForm actual. Tu technical account manager te ayuda a identificar dónde colocar este script en tu checkout.
+  La forma de obtener el `orderFormId` puede variar según tu configuración de VTEX. Tu technical account manager te ayuda a identificar dónde colocar este script en tu checkout.
 </Warning>
 
 ---
@@ -84,16 +90,18 @@ Cuando VTEX notifica una nueva orden, tu servidor extrae el Transaction ID de `m
 
 ```javascript
 // En tu servidor
+var VTEX_ACCOUNT = 'TU_CUENTA_VTEX';
+
 app.post('/vtex-webhook/order-placed', async (req, res) => {
   const orderId = req.body.OrderId;
 
   // Obtener detalles de la orden vía API de VTEX
   const order = await fetch(
-    `https://{cuenta}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`,
+    `https://${VTEX_ACCOUNT}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`,
     {
       headers: {
-        'X-VTEX-API-AppKey': VTEX_APP_KEY,
-        'X-VTEX-API-AppToken': VTEX_APP_TOKEN
+        'X-VTEX-API-AppKey': 'TU_APP_KEY',
+        'X-VTEX-API-AppToken': 'TU_APP_TOKEN'
       }
     }
   ).then(r => r.json());

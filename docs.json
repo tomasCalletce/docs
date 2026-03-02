@@ -70,11 +70,5 @@
       "href": "https://www.proofbynilho.com/"
     }
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/nilho",
-      "linkedin": "https://linkedin.com/company/nilho",
-      "website": "https://nilho.com"
-    }
-  }
+  "footer": {}
 }

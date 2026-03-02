@@ -20,9 +20,9 @@ description: "Integra Proof con tu tienda VTEX IO. Tu technical account manager 
 
 ---
 
-## Paso 1: Capturar el clic con una Pixel App
+## Paso 1: Capturar el Transaction ID con una Pixel App
 
-Una Pixel App en VTEX IO es un componente que se ejecuta en todas las páginas. Cuando un usuario llega desde un tracking link, la Pixel App captura el **Transaction ID** y lo guarda en una cookie.
+Una Pixel App en VTEX IO es un componente que se ejecuta en todas las páginas. Cuando un usuario llega desde un tracking link, la Pixel App captura el **Transaction ID** de la URL y lo guarda en una cookie.
 
 ### Crear la Pixel App
 
@@ -33,7 +33,7 @@ vtex init
 
 ### Configurar el manifest
 
-En `manifest.json`, configura los permisos para comunicarse con Proof:
+En `manifest.json`:
 
 ```json
 {
@@ -42,30 +42,22 @@ En `manifest.json`, configura los permisos para comunicarse con Proof:
   "version": "0.1.0",
   "builders": {
     "pixel": "0.x"
-  },
-  "policies": [
-    {
-      "name": "outbound-access",
-      "attrs": {
-        "host": "www.track.proof.nilho.com"
-      }
-    }
-  ]
+  }
 }
 ```
 
-### Implementar la captura de clics
+### Implementar la captura
 
-En `pixel/head.html`, agrega el SDK de Proof:
+En `pixel/head.html`, agrega el script que captura el Transaction ID:
 
 ```html
-<script src="https://www.track.proof.nilho.com/scripts/sdk/everflow.js"></script>
 <script>
-  EF.click({
-    offer_id: EF.urlParameter('oid'),
-    affiliate_id: EF.urlParameter('affid'),
-    transaction_id: EF.urlParameter('_ef_transaction_id')
-  });
+  // Capturar el Transaction ID del tracking link y guardarlo en una cookie
+  var params = new URLSearchParams(window.location.search);
+  var efTid = params.get('_ef_transaction_id');
+  if (efTid) {
+    document.cookie = 'ef_tid=' + efTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
+  }
 </script>
 ```
 
@@ -86,29 +78,26 @@ vtex install tuvendor.proof-tracking@0.1.0
 
 Para que el postback funcione, el Transaction ID debe quedar guardado en los datos de la orden de VTEX. En VTEX IO, esto se hace actualizando el `marketingData` del `orderForm` durante el checkout.
 
-En el pixel o en un componente del checkout, lee la cookie y pásala al `orderForm`:
+En la Pixel App o en un componente del checkout, lee la cookie y pásala al `orderForm` antes de que el usuario complete la compra:
 
-```html
-<script>
-  var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
-  var efTid = match ? match[1] : null;
+```javascript
+var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
+var efTid = match ? match[1] : null;
 
-  if (efTid) {
-    // Escuchar cuando el checkout está listo
-    function handleMessages(event) {
-      if (!event.data || !event.data.event) return;
-
-      if (event.data.event.eventName === 'vtex:orderPlaced') {
-        // El Transaction ID ya fue guardado en la cookie por el SDK
-      }
-    }
-    window.addEventListener('message', handleMessages);
-  }
-</script>
+if (efTid) {
+  fetch('/api/checkout/pub/orderForm/' + orderFormId + '/attachments/marketingData', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      utmSource: 'proof',
+      utmCampaign: efTid
+    })
+  });
+}
 ```
 
 <Warning>
-  Tu technical account manager te ayuda a determinar el mejor punto para guardar el Transaction ID en el `orderForm` de VTEX IO, ya que esto varía según la configuración de tu tienda.
+  La forma de obtener el `orderFormId` puede variar según tu configuración de VTEX IO. Tu technical account manager te ayuda a identificar el mejor punto para ejecutar este código en tu checkout.
 </Warning>
 
 ---
@@ -126,20 +115,32 @@ Configura un webhook en VTEX para que notifique a tu servidor cuando se completa
 
 ```javascript
 // En tu servidor
+var VTEX_ACCOUNT = 'TU_CUENTA_VTEX';
+
 const handleOrder = async (orderId) => {
-  const order = await vtexApi.getOrder(orderId);
+  // Obtener detalles de la orden vía API de VTEX
+  const order = await fetch(
+    `https://${VTEX_ACCOUNT}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`,
+    {
+      headers: {
+        'X-VTEX-API-AppKey': 'TU_APP_KEY',
+        'X-VTEX-API-AppToken': 'TU_APP_TOKEN'
+      }
+    }
+  ).then(r => r.json());
+
   const efTid = order.marketingData?.utmCampaign;
+  if (!efTid) return; // No es tráfico de Proof
 
-  if (efTid) {
-    const params = new URLSearchParams({
-      nid: '3935',
-      transaction_id: efTid,
-      amount: String(order.value / 100),
-      adv_event_id: orderId
-    });
+  // Disparar postback a Proof
+  const params = new URLSearchParams({
+    nid: '3935',
+    transaction_id: efTid,
+    amount: String(order.value / 100),
+    adv_event_id: orderId
+  });
 
-    await fetch(`https://www.track.proof.nilho.com/?${params}`);
-  }
+  await fetch(`https://www.track.proof.nilho.com/?${params}`);
 };
 ```
 
@@ -153,7 +154,7 @@ const handleOrder = async (orderId) => {
 
 <Steps>
   <Step title="Verifica la Pixel App">
-    Usa `vtex link` para probar localmente. Verifica que el SDK de Proof carga correctamente en todas las páginas.
+    Usa `vtex link` para probar localmente. Verifica que el script de captura funciona correctamente en todas las páginas.
   </Step>
   <Step title="Genera un tracking link de prueba en Proof">
     Crea un tracking link con un creador de prueba para tu oferta.
