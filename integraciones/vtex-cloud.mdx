@@ -1,0 +1,246 @@
+---
+title: "VTEX IO / Cloud (Store Framework)"
+description: "Integra Proof con tu tienda VTEX IO usando una Pixel App personalizada o scripts de checkout."
+---
+
+## Resumen
+
+**VTEX IO** (también llamado Store Framework o VTEX Cloud) es la arquitectura moderna de VTEX. Usa un sistema de **apps** y componentes. La integración con Proof se hace a través de una **Pixel App** personalizada o usando la app de Google Tag Manager.
+
+<Info>
+  Proof se integra con VTEX IO a través de una Pixel App o Google Tag Manager. Tu technical account manager te ayuda con la configuración.
+</Info>
+
+## Prerrequisitos
+
+- Proyecto VTEX IO configurado con acceso al CLI (`vtex` CLI)
+- Tu **Verification Token** de Proof
+- Tu **Offer ID** en Proof
+- Tu **Tracking Domain** (ej: `track.proof.nilho.com`)
+- Conocimiento básico de desarrollo en VTEX IO
+
+---
+
+## Opción 1: Pixel App personalizada (Recomendado)
+
+Una Pixel App en VTEX IO es un componente que se ejecuta en todas las páginas y puede escuchar eventos del store.
+
+### Paso 1: Crear la Pixel App
+
+```bash
+vtex init
+# Selecciona "pixel" como tipo de app
+```
+
+### Paso 2: Configurar el manifest
+
+En `manifest.json`, configura los permisos necesarios:
+
+```json
+{
+  "name": "proof-tracking",
+  "vendor": "tuvendor",
+  "version": "0.1.0",
+  "builders": {
+    "pixel": "0.x"
+  },
+  "policies": [
+    {
+      "name": "outbound-access",
+      "attrs": {
+        "host": "www.track.proof.nilho.com"
+      }
+    }
+  ]
+}
+```
+
+### Paso 3: Implementar el tracking de clics
+
+En `pixel/head.html`, agrega el SDK de Proof:
+
+```html
+<script src="https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js"></script>
+<script>
+  // Capturar Click ID si viene de un tracking link
+  EF.click({
+    offer_id: EF.urlParameter('oid'),
+    affiliate_id: EF.urlParameter('affid'),
+    transaction_id: EF.urlParameter('_ef_transaction_id')
+  });
+</script>
+```
+
+### Paso 4: Implementar el tracking de conversiones
+
+En `pixel/body.html` o en el script del pixel, escucha el evento `order-placed`:
+
+```html
+<script>
+  // Escuchar el evento de orden completada
+  function handleMessages(event) {
+    if (!event.data || !event.data.event) return;
+
+    if (event.data.event.eventName === 'vtex:orderPlaced') {
+      var orderData = event.data.event;
+
+      // Cargar SDK y disparar conversión
+      var script = document.createElement('script');
+      script.src = 'https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js';
+      script.onload = function() {
+        EF.conversion({
+          offer_id: TU_OFFER_ID,
+          amount: orderData.transactionTotal,
+          adv_event_id: orderData.transactionId,
+          verification_token: 'TU_VERIFICATION_TOKEN'
+        });
+      };
+      document.head.appendChild(script);
+    }
+  }
+
+  window.addEventListener('message', handleMessages);
+</script>
+```
+
+<Warning>
+  Reemplaza `TU_OFFER_ID` y `TU_VERIFICATION_TOKEN` con tus valores reales.
+</Warning>
+
+### Paso 5: Instalar y publicar
+
+```bash
+# Desarrollo local
+vtex link
+
+# Publicar
+vtex publish
+vtex install tuvendor.proof-tracking@0.1.0
+```
+
+### Eventos disponibles en VTEX IO
+
+| Evento | Descripción | Uso |
+|---|---|---|
+| `vtex:orderPlaced` | Orden completada | Conversión principal |
+| `vtex:addToCart` | Producto agregado al carrito | Evento personalizado |
+| `vtex:pageView` | Visita a una página | Tracking de vistas |
+| `vtex:cartChanged` | Cambio en el carrito | Evento personalizado |
+
+---
+
+## Opción 2: Google Tag Manager
+
+Si ya usas GTM en tu tienda VTEX IO, puedes configurar el tracking de Proof a través de tags.
+
+### Paso 1: Instalar la app de GTM en VTEX IO
+
+```bash
+vtex install vtex.google-tag-manager@3.x
+```
+
+Configura tu GTM Container ID en el admin de VTEX.
+
+### Paso 2: Crear tag de clic (Click Tracking)
+
+En GTM, crea un tag con este script:
+
+- **Tag Type**: Custom HTML
+- **Trigger**: All Pages
+
+```html
+<script src="https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js"></script>
+<script>
+  EF.click({
+    offer_id: EF.urlParameter('oid'),
+    affiliate_id: EF.urlParameter('affid'),
+    transaction_id: EF.urlParameter('_ef_transaction_id')
+  });
+</script>
+```
+
+### Paso 3: Crear tag de conversión
+
+- **Tag Type**: Custom HTML
+- **Trigger**: Custom Event, `orderPlaced`
+
+```html
+<script>
+  var orderData = window.dataLayer.find(function(item) {
+    return item.event === 'orderPlaced';
+  });
+
+  if (orderData && typeof EF !== 'undefined') {
+    EF.conversion({
+      offer_id: TU_OFFER_ID,
+      amount: orderData.transactionTotal,
+      adv_event_id: orderData.transactionId,
+      verification_token: 'TU_VERIFICATION_TOKEN'
+    });
+  }
+</script>
+```
+
+---
+
+## Postback S2S (Alternativa server-side)
+
+Para máxima confiabilidad, complementa el tracking del frontend con un postback S2S.
+
+### Configuración
+
+1. **Almacenar Click ID**: Usa `marketingData` de VTEX para guardar el `_ef_transaction_id` en la orden (ver [guía de VTEX Legacy](/integraciones/vtex-legacy#método-2-postback-s2s-más-confiable) para detalles).
+
+2. **Webhook de VTEX**: Configura un webhook OMS para notificar a tu servidor cuando se crea una orden.
+
+3. **Disparar postback**: Tu servidor extrae el Click ID de la orden y envía la conversión a Proof.
+
+```javascript
+// Endpoint que recibe el webhook de VTEX
+const handleOrder = async (orderId) => {
+  const order = await vtexApi.getOrder(orderId);
+  const efTid = order.marketingData?.utmCampaign;
+
+  if (efTid) {
+    const params = new URLSearchParams({
+      verification_token: process.env.PROOF_TOKEN,
+      transaction_id: efTid,
+      amount: order.value / 100,
+      adv_event_id: orderId,
+      offer_id: process.env.OFFER_ID
+    });
+
+    await fetch(`https://www.track.proof.nilho.com/sdk/conversion?${params}`);
+  }
+};
+```
+
+---
+
+## Probar la integración
+
+<Steps>
+  <Step title="Usa vtex link para probar localmente">
+    Verifica que el SDK de Proof carga correctamente en todas las páginas.
+  </Step>
+  <Step title="Genera un tracking link de prueba en Proof" />
+  <Step title="Haz clic en el link y verifica el parámetro _ef_transaction_id" />
+  <Step title="Completa una compra de prueba" />
+  <Step title="Confirma la conversión en Proof > Reports > Conversions" />
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="El pixel no se ejecuta en VTEX IO">
+  Verifica que la Pixel App está correctamente instalada con `vtex list`. Asegúrate de que el `manifest.json` tiene los builders y policies correctos.
+</Accordion>
+
+<Accordion title="El evento orderPlaced no se dispara">
+  En VTEX IO, los eventos se comunican via `postMessage`. Asegúrate de escuchar en `window.addEventListener('message', ...)` y no directamente en el dataLayer.
+</Accordion>
+
+<Accordion title="Conflictos con otras Pixel Apps">
+  Si tienes múltiples pixel apps, verifica que no hay conflictos de scripts. Cada pixel app se ejecuta en un iframe separado en VTEX IO.
+</Accordion>
+
+<Snippet file="soporte.mdx" />

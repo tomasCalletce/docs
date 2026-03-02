@@ -1,0 +1,42 @@
+---
+title: "Integraciones"
+description: "Proof se integra con las plataformas de e-commerce más usadas en la región, o con tu sistema propio via API."
+---
+
+## Se conecta con tu stack actual
+
+Proof se integra directamente con las plataformas de e-commerce más usadas en la región, o con tu sistema propio via API. Tu technical account manager te acompaña en todo el proceso.
+
+## Plataformas soportadas
+
+<Columns cols={3}>
+  <Card title="Shopify" icon="shopify" href="/integraciones/shopify">
+    Conecta tu tienda Shopify en minutos con nuestra app.
+  </Card>
+  <Card title="VTEX" icon="store" href="/integraciones/vtex-cloud">
+    Integración con VTEX IO para marcas en Latinoamérica.
+  </Card>
+  <Card title="API Custom" icon="code" href="/tracking/metodos-de-conversion">
+    API REST y webhooks para cualquier plataforma o sistema propio.
+  </Card>
+</Columns>
+
+## VTEX: ¿Qué versión tengo?
+
+VTEX tiene tres variantes principales. La integración varía según cuál uses:
+
+| Variante | Descripción | Guía |
+|---|---|---|
+| **VTEX Legacy (Portal/CMS)** | La plataforma monolítica original. Checkout clásico de VTEX. | [Integrar VTEX Legacy](/integraciones/vtex-legacy) |
+| **VTEX IO / Cloud (Store Framework)** | Arquitectura moderna basada en componentes VTEX IO. | [Integrar VTEX Cloud](/integraciones/vtex-cloud) |
+| **VTEX Headless (FastStore / Custom)** | Frontend desacoplado (React/Next.js). Comunica con VTEX via APIs. | [Integrar VTEX Headless](/integraciones/vtex-headless) |
+
+<Accordion title="¿Cómo sé qué versión de VTEX tengo?">
+  - **VTEX Legacy**: Tu tienda usa el CMS clásico de VTEX con templates HTML. La URL del admin es `{cuenta}.myvtex.com/admin/Site/Template.aspx`.
+  - **VTEX IO / Cloud**: Tu tienda se desarrolla con VTEX IO CLI y apps. Usas `vtex link` y `vtex deploy` para desarrollar.
+  - **VTEX Headless**: Tu frontend es una app separada (FastStore, Gatsby, Next.js) que consume las APIs de VTEX. No usas el storefront de VTEX directamente.
+
+  Si no estás seguro, pregúntale a tu technical account manager.
+</Accordion>
+
+<Snippet file="soporte.mdx" />

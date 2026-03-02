@@ -1,0 +1,76 @@
+---
+title: "Conceptos básicos"
+description: "Entiende los conceptos fundamentales de Proof: marcas, creadores, ofertas y cómo funciona el tracking."
+---
+
+## ¿Qué es Proof?
+
+Proof es la infraestructura que conecta recomendaciones con ventas. Registra, mide y distribuye el valor de cada recomendación de forma transparente.
+
+## Roles principales
+
+<Columns cols={3}>
+  <Card title="Marca" icon="building">
+    Eres tú, la marca o tienda que crea ofertas y paga por resultados (ventas, leads, etc.).
+  </Card>
+  <Card title="Creador" icon="users">
+    La persona que recomienda tus productos a su audiencia. Puede ser un creador de contenido, un blogger o cualquier fuente de tráfico.
+  </Card>
+  <Card title="Proof" icon="circle-nodes">
+    La plataforma que conecta marcas con creadores, gestiona el tracking y facilita los pagos.
+  </Card>
+</Columns>
+
+## ¿Qué es una Oferta?
+
+Una **oferta** es la unidad central en Proof. Representa una campaña que creas para que los creadores la recomienden. Cada oferta incluye:
+
+- **URL de destino**: La landing page donde llegarán los usuarios.
+- **Tracking link**: El enlace que usan los creadores para dirigir tráfico.
+- **Modelo de pago**: Cómo compensas a los creadores (por venta, por acción, etc.).
+- **Eventos de conversión**: Qué acciones cuentan como resultado (compra, registro, etc.).
+
+Conoce todos los componentes de una oferta en detalle en [¿Qué es una oferta?](/ofertas/que-es-una-oferta).
+
+## ¿Cómo funciona el tracking?
+
+Cuando creas una oferta en Proof, cada creador recibe un **link único** para esa oferta. Ese link es exclusivo de ese creador, así que cuando alguien lo usa, Proof sabe exactamente quién generó esa visita.
+
+Cada vez que un usuario hace clic en ese link, Proof genera un **Transaction ID** (`_ef_transaction_id`). Es un identificador único para esa interacción específica. Ese ID viaja con el usuario hasta tu sitio, y cuando se genera una venta, tu sistema lo envía de vuelta a Proof. Así se cierra el ciclo: Proof conecta la venta con el creador que la generó.
+
+<Steps>
+  <Step title="El creador comparte su link">
+    El creador publica o envía su tracking link único a su audiencia.
+  </Step>
+  <Step title="Un usuario hace clic">
+    Proof registra el clic, genera un Transaction ID único y redirige al usuario a tu sitio con ese ID en la URL.
+  </Step>
+  <Step title="El usuario llega a tu sitio">
+    Tu sitio captura el Transaction ID de la URL y lo guarda (cookie o sesión) para no perderlo cuando el usuario navegue a otras páginas.
+  </Step>
+  <Step title="Se genera una venta">
+    Cuando el usuario compra, tu sistema envía el Transaction ID, el monto y el Order ID de vuelta a Proof. Proof conecta esa venta con el creador que la originó.
+  </Step>
+</Steps>
+
+## Conceptos clave de tracking
+
+| Concepto | Descripción |
+|---|---|
+| **Click ID** (`_ef_transaction_id`) | Identificador único generado por cada clic. Es la pieza clave que conecta un clic con una conversión. |
+| **Order ID** (`adv_event_id`) | Tu número de orden o transacción. Se usa para reconciliar conversiones con tus registros internos. |
+| **Verification Token** | Tu token de autenticación para reportar conversiones a Proof. Encuéntralo en la configuración de tu cuenta. |
+| **Tracking Domain** | El dominio personalizado usado para los enlaces de tracking (ej: `track.proof.nilho.com`). |
+
+## ¿Qué sigue?
+
+<Columns cols={2}>
+  <Card title="Crear tu primera oferta" icon="plus" href="/ofertas/crear-una-oferta">
+    Configura una oferta paso a paso.
+  </Card>
+  <Card title="Integrar tu tienda" icon="plug" href="/integraciones/overview">
+    Conecta Shopify o VTEX con Proof.
+  </Card>
+</Columns>
+
+<Snippet file="soporte.mdx" />

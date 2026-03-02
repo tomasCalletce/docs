@@ -1,0 +1,101 @@
+---
+title: "Métodos de conversión"
+description: "Cómo reportar conversiones a Proof desde tu servidor usando Postback S2S o la API de conversiones."
+---
+
+## Resumen
+
+Para reportar conversiones a Proof, tu sistema necesita enviar una solicitud HTTP cuando ocurre una venta u otra acción. El método recomendado es **Postback S2S (Server-to-Server)**: tu backend se comunica directamente con Proof sin depender del navegador del usuario.
+
+<Tip>
+  El Postback S2S es el método más confiable. No depende de cookies, ad blockers ni del navegador. Es la forma estándar de integrar Proof.
+</Tip>
+
+
+## Postback S2S (Server-to-Server)
+
+Tu **servidor** envía una solicitud HTTP directamente a Proof cuando ocurre una [conversión](/tracking/como-funciona).
+
+### Flujo
+
+<Steps>
+  <Step title="Captura el Click ID">
+    Cuando un usuario llega a tu sitio desde un tracking link, la URL incluye el parámetro `_ef_transaction_id`. Tu sistema lo captura y lo almacena (cookie, sesión o base de datos).
+  </Step>
+  <Step title="El usuario completa la acción">
+    El usuario compra, se registra o completa la acción configurada en tu oferta.
+  </Step>
+  <Step title="Tu servidor reporta a Proof">
+    Tu backend envía una solicitud GET con los datos de la conversión.
+  </Step>
+</Steps>
+
+### Endpoint
+
+```bash
+curl "https://www.track.proof.nilho.com/sdk/conversion?\
+verification_token=TU_TOKEN\
+&transaction_id=CLICK_ID\
+&amount=150000\
+&adv_event_id=ORDER-12345\
+&offer_id=100"
+```
+
+### Parámetros
+
+| Parámetro | Requerido | Descripción |
+|---|---|---|
+| `verification_token` | Sí | Token único de tu cuenta en Proof. Lo encuentras en **Company Settings** > **Verification Token**. Identifica a tu marca cuando reportas conversiones. |
+| `transaction_id` | Sí* | El Click ID que Proof generó cuando el usuario hizo clic en el tracking link. Se pasa como `_ef_transaction_id` en la URL de tu sitio. Es lo que conecta el clic con la venta. |
+| `amount` | No | Valor total de la venta en tu moneda. Requerido si tu oferta usa modelo CPS (porcentaje sobre la venta). Para CPA (monto fijo) no es necesario. |
+| `adv_event_id` | Recomendado | Tu número de orden o ID de transacción interno. Proof lo guarda para que puedas reconciliar las conversiones con tus registros. |
+| `offer_id` | Sí | El ID numérico de tu oferta en Proof. Lo encuentras en el dashboard al ver los detalles de la oferta. |
+
+| `event_id` | No | ID del evento personalizado (add to cart, checkout started, etc.). Solo necesario si quieres reportar acciones adicionales a la venta principal. |
+
+
+### Ejemplo: conversión con monto y Order ID
+
+```bash
+curl "https://www.track.proof.nilho.com/sdk/conversion?\
+verification_token=abc123\
+&transaction_id=ef_tx_9876\
+&amount=250000\
+&adv_event_id=ORD-2026-0042\
+&offer_id=15"
+```
+
+
+
+## ¿Qué pasa si envío la misma conversión dos veces?
+
+Proof protege contra conversiones duplicadas de forma automática. Si un mismo Transaction ID ya tiene una conversión registrada, las siguientes se rechazan. Esto significa que puedes implementar reintentos en tu integración sin preocuparte por generar cobros o pagos dobles.
+
+## Eventos personalizados
+
+Además de la conversión principal (venta), puedes reportar eventos intermedios como add to cart o checkout started. Agrega el parámetro `event_id` con el ID del evento configurado en tu oferta:
+
+```bash
+curl "https://www.track.proof.nilho.com/sdk/conversion?\
+verification_token=TU_TOKEN\
+&transaction_id=CLICK_ID\
+&offer_id=100\
+&event_id=2"
+```
+
+
+## ¿Qué integración usar?
+
+<Accordion title="Tengo una tienda Shopify">
+  Usa la integración nativa de Shopify, que maneja todo automáticamente. Ver [Integración Shopify](/integraciones/shopify).
+</Accordion>
+
+<Accordion title="Tengo una tienda VTEX">
+  Depende de tu tipo de VTEX. Recomendamos Postback S2S como método principal. Ver [Integraciones VTEX](/integraciones/overview).
+</Accordion>
+
+<Accordion title="Tengo un sitio custom">
+  Implementa el **Postback S2S** desde tu backend. Es el método más directo y confiable.
+</Accordion>
+
+<Snippet file="soporte.mdx" />

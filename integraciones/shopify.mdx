@@ -1,0 +1,193 @@
+---
+title: "Integración con Shopify"
+description: "Guía completa para conectar tu tienda Shopify con Proof: instalación, tracking automático, reconciliación y reportes."
+---
+
+## Resumen
+
+La integración de Shopify con Proof usa la **app nativa de Proof** disponible en el Shopify App Store. Una vez instalada, el tracking de clics y conversiones funciona automáticamente.
+
+## Prerrequisitos
+
+Antes de empezar, asegúrate de tener:
+
+- Una tienda Shopify activa (cualquier plan)
+- Acceso de administrador a tu tienda Shopify
+- Una cuenta de marca activa en Proof
+- Al menos una oferta creada en Proof
+
+---
+
+## Paso a paso
+
+<Steps>
+  <Step title="Instalar la app de Proof">
+    1. En tu dashboard de Proof, ve a **Integrations** > **Shopify**.
+    2. Haz clic en **Install Shopify App**. Serás redirigido al Shopify App Store.
+    3. En Shopify, haz clic en **Add app** > **Install app**.
+    4. Autoriza la conexión entre Proof y tu tienda Shopify.
+
+    <Info>
+      La app solicitará permisos para leer datos de órdenes y agregar scripts a tu tienda. Estos son necesarios para el tracking.
+    </Info>
+  </Step>
+
+  <Step title="Conectar con tu cuenta de Proof">
+    Después de instalar la app:
+
+    1. Ingresa tu **ID de marca** de Proof.
+    2. Ingresa tu **Verification Token** (encuéntralo en Proof > **Company Settings**).
+    3. Selecciona tu **Tracking Domain** (ej: `track.proof.nilho.com`).
+    4. Haz clic en **Connect**.
+  </Step>
+
+  <Step title="Configurar tracking de clics">
+    La app inyecta automáticamente el SDK de Proof en **todas las páginas** de tu tienda. Esto significa:
+
+    - Cuando un usuario llega via un tracking link, el SDK captura el `_ef_transaction_id`.
+    - El Click ID se guarda en una **cookie** del navegador.
+    - No necesitas agregar código manual a tu tema de Shopify.
+
+    <Tip>
+      Verifica que el SDK está activo visitando tu tienda y buscando `sdk/proof.js` en el inspector del navegador (pestaña Network).
+    </Tip>
+  </Step>
+
+  <Step title="Configurar tracking de conversiones">
+    La app configura automáticamente el tracking de conversiones en la página de **Order Confirmation** (thank you page):
+
+    - Detecta cuando se completa una compra.
+    - Lee el Click ID de la cookie.
+    - Envía la conversión a Proof con:
+      - `transaction_id`: Click ID de la cookie
+      - `amount`: Total de la orden de Shopify
+      - `adv_event_id`: Número de orden de Shopify
+
+    **No necesitas configurar nada adicional** para el tracking básico de ventas.
+  </Step>
+
+  <Step title="Seleccionar la oferta">
+    En la configuración de la app, selecciona la **oferta de Proof** a la que quieres asociar las conversiones de esta tienda.
+
+    <Warning>
+      Si tienes múltiples ofertas para la misma tienda, necesitarás configurar reglas de routing. Contacta a soporte para ayuda con este escenario.
+    </Warning>
+  </Step>
+</Steps>
+
+---
+
+## Reconciliación
+
+### ¿Cómo se mapean los datos?
+
+| Dato en Shopify | Dato en Proof | Parámetro |
+|---|---|---|
+| Order Number | Order ID | `adv_event_id` |
+| Order Total | Amount | `amount` |
+| Cart ID | - | Usado internamente por la app |
+
+### Verificar conversiones
+
+Para confirmar que las conversiones se están registrando correctamente:
+
+1. En Proof, ve a **Reports** > **Conversions**.
+2. Filtra por tu oferta.
+3. Verifica que el **Order ID** coincide con el número de orden en Shopify.
+4. Verifica que el **Amount** coincide con el total de la orden.
+
+---
+
+## Tracking orgánico
+
+El SDK de Proof también captura **conversiones orgánicas**, es decir, ventas que ocurren sin un clic de creador previo.
+
+- Estas conversiones aparecen en los reportes pero **no se atribuyen** a ningún creador.
+- Son útiles para entender el volumen total de ventas vs. ventas generadas por creadors.
+- Puedes habilitar o deshabilitar el tracking orgánico en la configuración de la app.
+
+---
+
+## Eventos adicionales
+
+Además de la venta, puedes trackear eventos intermedios para obtener métricas más detalladas:
+
+| Evento | Descripción |
+|---|---|
+| **Add to Cart** | El usuario agrega un producto al carrito |
+| **Checkout Started** | El usuario inicia el proceso de checkout |
+| **Page View** | El usuario visita una página específica |
+
+Para habilitar eventos adicionales:
+
+1. En Proof, agrega **eventos personalizados** a tu oferta (con sus Event IDs).
+2. En la app de Shopify/Proof, habilita los eventos que quieres trackear.
+3. Los eventos se enviarán automáticamente cuando ocurran.
+
+---
+
+## Probar la integración
+
+<Steps>
+  <Step title="Genera un tracking link de prueba">
+    En Proof, crea un tracking link con un **creador de prueba** para tu oferta.
+  </Step>
+  <Step title="Haz clic en el tracking link">
+    Abre el link en un navegador (preferiblemente en modo incógnito). Verifica que:
+    - Eres redirigido a tu tienda Shopify.
+    - La URL tiene el parámetro `_ef_transaction_id`.
+  </Step>
+  <Step title="Completa una compra de prueba">
+    Usa el checkout de Shopify con un producto de prueba (o usa Shopify Bogus Gateway).
+  </Step>
+  <Step title="Verifica en Proof">
+    En **Reports** > **Conversions**, confirma que:
+    - La conversión aparece con el creador de prueba.
+    - El Order ID coincide con tu orden de Shopify.
+    - El Amount es correcto.
+    - El Click ID está presente.
+  </Step>
+  <Step title="Verifica el click-to-conversion path">
+    En el detalle de la conversión, revisa que el flujo clic → conversión muestra los timestamps correctos.
+  </Step>
+</Steps>
+
+---
+
+## Reportes
+
+Con la integración activa, tendrás acceso a estos datos en los reportes de Proof:
+
+- **Order ID**: Número de orden de Shopify para cada conversión.
+- **Amount**: Valor exacto de cada venta.
+- **Click-to-Conversion Time**: Tiempo entre el clic del creador y la compra.
+- **Creador Performance**: Qué creadors generan más ventas en tu tienda.
+
+### Refunds
+
+<Warning>
+  Los reembolsos en Shopify **no se sincronizan automáticamente** con Proof. Si necesitas revertir una conversión por un refund, debes hacerlo manualmente en Proof o a través de la API.
+</Warning>
+
+---
+
+## Troubleshooting
+
+<Accordion title="Las conversiones no aparecen en Proof">
+  1. Verifica que el SDK de Proof está cargando en tu tienda (inspector del navegador > Network > busca `sdk/proof.js`).
+  2. Confirma que tu Verification Token es correcto en la configuración de la app.
+  3. Revisa que la oferta seleccionada en la app es la correcta.
+  4. Asegúrate de que el usuario hizo clic en un tracking link antes de comprar (revisa que la cookie `ef_tid` existe).
+</Accordion>
+
+<Accordion title="El monto de la conversión no coincide">
+  Verifica que la app está configurada para usar el **Order Total** (no subtotal). Revisa si impuestos y envío están incluidos en el monto que envías.
+</Accordion>
+
+<Accordion title="El tracking de clics no funciona">
+  1. Revisa que la app de Proof está instalada y activa en Shopify > **Settings** > **Apps**.
+  2. Verifica que no hay conflictos con otras apps de tracking o scripts de terceros.
+  3. Prueba en un navegador sin ad blocker habilitado.
+</Accordion>
+
+<Snippet file="soporte.mdx" />

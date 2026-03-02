@@ -1,0 +1,90 @@
+---
+title: "¿Cómo funciona el tracking?"
+description: "El flujo completo de tracking en Proof: desde que el creador comparte su link hasta que tu sistema reporta la conversión."
+---
+
+## El flujo de tracking
+
+Cada vez que un creador comparte su link y alguien compra a través de él, Proof conecta esa venta con el creador que la generó. Así funciona:
+
+<Steps>
+  <Step title="El creador comparte su tracking link">
+    Cada creador recibe un link único para tu oferta:
+
+    ```
+    https://track.proof.nilho.com/click?oid=123&affid=456
+    ```
+
+    Este link identifica la oferta (`oid`) y al creador (`affid`).
+  </Step>
+
+  <Step title="Un usuario hace clic">
+    Cuando alguien hace clic en ese link, Proof registra el clic, genera un **Transaction ID** único (`_ef_transaction_id`) y redirige al usuario a tu sitio con ese ID en la URL:
+
+    ```
+    https://tutienda.com/promo?_ef_transaction_id=abc123xyz789
+    ```
+  </Step>
+
+  <Step title="Tu sitio captura el Transaction ID">
+    El Transaction ID solo existe en la URL de la primera página. Si el usuario navega a otra página de tu sitio, el parámetro se pierde. Por eso tu sitio necesita capturarlo y guardarlo apenas el usuario llega.
+
+    - **Shopify**: La app de Proof lo captura y guarda automáticamente.
+    - **VTEX**: Tu integración lo captura de la URL y lo guarda en una cookie. Durante el checkout, ese valor se pasa a los datos de la orden para que el servidor lo tenga disponible al reportar la conversión.
+    - **Custom**: Tu sistema lo captura de la URL al llegar y lo persiste (cookie o sesión) hasta que se confirme la orden.
+  </Step>
+
+  <Step title="El usuario compra">
+    El usuario navega tu sitio y completa la compra.
+  </Step>
+
+  <Step title="Tu sistema reporta la conversión">
+    Tu backend envía una solicitud HTTP a Proof con los datos de la venta:
+
+    | Dato | Parámetro | Descripción |
+    |---|---|---|
+    | Transaction ID | `transaction_id` | El `_ef_transaction_id` capturado en el paso anterior |
+    | Monto | `amount` | Valor de la venta |
+    | Order ID | `adv_event_id` | Tu número de orden interno |
+    | Token | `verification_token` | Tu token de autenticación |
+    | Offer ID | `offer_id` | El ID de la oferta |
+
+    Consulta [Métodos de conversión](/tracking/metodos-de-conversion) para ver cómo implementar este paso.
+  </Step>
+
+  <Step title="Proof procesa la conversión">
+    Proof recibe la conversión, la valida y la atribuye al creador correcto usando el Transaction ID. El creador recibe su comisión según el modelo de pago configurado.
+  </Step>
+</Steps>
+
+## Conceptos importantes
+
+### Transaction ID (`_ef_transaction_id`)
+
+Es el identificador único de cada clic. Es la pieza clave que conecta todo el flujo. Sin él, una conversión no se puede atribuir a un creador.
+
+### Order ID (`adv_event_id`)
+
+Es tu número de orden o transacción interna. Proof lo almacena junto con la conversión para que puedas reconciliar tus ventas con los reportes de Proof.
+
+### Verification Token
+
+Tu token de autenticación para reportar conversiones. Lo encuentras en:
+**Proof Dashboard** > **Company Settings** > **Verification Token**
+
+<Warning>
+  Nunca expongas tu Verification Token en el frontend. Úsalo solo en solicitudes desde tu servidor.
+</Warning>
+
+## ¿Qué sigue?
+
+<Columns cols={2}>
+  <Card title="Métodos de conversión" icon="code" href="/tracking/metodos-de-conversion">
+    Cómo reportar conversiones desde tu servidor via Postback S2S.
+  </Card>
+  <Card title="Modelos de atribución" icon="bullseye" href="/tracking/modelos-de-atribucion">
+    Cómo Proof decide qué creador recibe crédito por una venta.
+  </Card>
+</Columns>
+
+<Snippet file="soporte.mdx" />

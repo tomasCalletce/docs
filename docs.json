@@ -1,122 +1,70 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Proof by Nilho",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#E8732A",
+    "light": "#F4A261",
+    "dark": "#C75B1A"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentación",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Inicio",
             "pages": [
               "index",
-              "quickstart",
-              "development"
+              "conceptos-basicos"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Ofertas",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "ofertas/que-es-una-oferta",
+              "ofertas/crear-una-oferta"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Tracking",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "tracking/como-funciona",
+              "tracking/metodos-de-conversion",
+              "tracking/modelos-de-atribucion"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Integraciones",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API reference",
-        "groups": [
-          {
-            "group": "API documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "integraciones/overview",
+              "integraciones/shopify",
+              "integraciones/vtex-legacy",
+              "integraciones/vtex-cloud",
+              "integraciones/vtex-headless"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Ir a Proof",
+      "href": "https://www.proofbynilho.com/"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "x": "https://x.com/nilho",
+      "linkedin": "https://linkedin.com/company/nilho",
+      "website": "https://nilho.com"
     }
   }
 }

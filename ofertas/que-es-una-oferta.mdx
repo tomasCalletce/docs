@@ -1,0 +1,101 @@
+---
+title: "¿Qué es una oferta?"
+description: "Entiende qué compone una oferta en Proof y cómo configurar sus componentes principales."
+---
+
+## ¿Qué es una oferta?
+
+Una **oferta** es la forma en que publicas una campaña en Proof para que los creadores la recomienden. Piensa en ella como el acuerdo entre tu marca y los creadores: qué producto promueven, a dónde envían a los usuarios, y cuánto ganan por cada resultado.
+
+**Ejemplo:** Tienes una tienda de skincare y quieres que creadores recomienden tu crema hidratante. Creas una oferta en Proof con la página del producto como destino, defines que una venta es el resultado que quieres medir, y configuras que el creador gane el 10% de cada venta. Proof genera un link único para cada creador y tú solo pagas cuando hay resultados.
+
+## Componentes de una oferta
+
+### Tracking Link
+
+Es el enlace que Proof genera para cada creador. Cuando un usuario hace clic, Proof registra el evento y redirige al usuario a tu landing page.
+
+```
+https://track.proof.nilho.com/click?oid={offer_id}&affid={creator_id}
+```
+
+Cada clic genera un **Click ID** (`_ef_transaction_id`) que se usa para atribuir la conversión al creador correcto.
+
+### Landing Page (URL de destino)
+
+La página de tu sitio donde llegan los usuarios después de hacer clic en el tracking link. Puede ser:
+
+- Tu página principal
+- Una página de producto específica
+- Una landing page diseñada para una campaña
+
+<Tip>
+  Asegúrate de que tu landing page carga rápido y está optimizada para conversión. Los creadores envían tráfico real.aprovéchalo.
+</Tip>
+
+### Eventos de conversión
+
+Define qué acciones cuentan como resultado:
+
+| Evento | Ejemplo |
+|---|---|
+| **Venta (default)** | El usuario compra un producto |
+| **Lead** | El usuario llena un formulario de registro |
+| **Instalación** | El usuario instala una app |
+| **Evento personalizado** | Agregar al carrito, inicio de checkout, etc. |
+
+Cada oferta tiene un **evento por defecto** (generalmente la venta) y puede tener **eventos adicionales** para trackear acciones intermedias.
+
+### Revenue y Payout
+
+| Concepto | Qué es |
+|---|---|
+| **Revenue** | Lo que tú pagas por cada conversión (tu costo) |
+| **Payout** | Lo que el creador recibe por cada conversión (su comisión) |
+
+## Modelos de pago
+
+<Tabs>
+  <Tab title="CPA (Cost Per Action)">
+    Pagas un **monto fijo** por cada conversión.
+
+    **Ejemplo:** $10 USD por cada venta completada.
+
+    Ideal cuando el valor promedio de tus órdenes es similar.
+  </Tab>
+  <Tab title="CPS (Cost Per Sale)">
+    Pagas un **porcentaje del valor de la venta**.
+
+    **Ejemplo:** 8% del total de la orden.
+
+    Ideal cuando tus órdenes varían mucho en valor.
+  </Tab>
+  <Tab title="CPC (Cost Per Click)">
+    Pagas por cada **clic** generado, sin importar si hay conversión.
+
+    **Ejemplo:** $0.50 USD por clic.
+
+    Menos común en recomendaciones. Útil para campañas de awareness.
+  </Tab>
+  <Tab title="Revshare">
+    Compartes un **porcentaje de los ingresos** generados de forma recurrente.
+
+    **Ejemplo:** 15% de los ingresos mensuales del cliente referido.
+
+    Ideal para suscripciones o servicios recurrentes.
+  </Tab>
+</Tabs>
+
+## Estado de una oferta
+
+| Estado | Descripción |
+|---|---|
+| **Active** | La oferta está disponible para que los creadores la promuevan |
+| **Paused** | La oferta está temporalmente detenida (no genera tracking links nuevos) |
+| **Expired** | La oferta ha llegado a su fecha de fin |
+
+## ¿Qué sigue?
+
+Sigue la guía paso a paso para [crear tu primera oferta](/ofertas/crear-una-oferta) en Proof.
+
+<Snippet file="soporte.mdx" />

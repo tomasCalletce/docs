@@ -1,0 +1,320 @@
+---
+title: "VTEX Headless (FastStore / Custom Frontend)"
+description: "Integra Proof con tu frontend desacoplado de VTEX: FastStore, Next.js, React o cualquier frontend custom."
+---
+
+## Resumen
+
+**VTEX Headless** es una arquitectura donde el frontend es una aplicación separada (React, Next.js, FastStore, Gatsby, etc.) que se comunica con VTEX a través de APIs. Tienes control total del código, lo que permite integrar Proof de forma flexible.
+
+<Info>
+  En arquitecturas headless tienes control total del código, lo que permite integrar Proof de forma flexible via SDK o postback S2S. Tu technical account manager te ayuda con la implementación.
+</Info>
+
+## Prerrequisitos
+
+- Acceso al código fuente de tu frontend
+- Tu **Verification Token** de Proof
+- Tu **Offer ID** en Proof
+- Tu **Tracking Domain** (ej: `track.proof.nilho.com`)
+
+---
+
+## Tracking de clics
+
+### Opción A: JavaScript SDK
+
+Incluye el SDK de Proof en tu layout principal:
+
+```jsx
+// En tu layout principal (ej: _app.tsx en Next.js o Layout.tsx en FastStore)
+import { useEffect } from 'react'
+
+export default function Layout({ children }) {
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js'
+    script.onload = () => {
+      window.EF.click({
+        offer_id: window.EF.urlParameter('oid'),
+        affiliate_id: window.EF.urlParameter('affid'),
+        transaction_id: window.EF.urlParameter('_ef_transaction_id')
+      })
+    }
+    document.head.appendChild(script)
+  }, [])
+
+  return <>{children}</>
+}
+```
+
+### Opción B: Captura manual (Sin SDK)
+
+Si prefieres no cargar el SDK en todas las páginas, captura el Click ID manualmente:
+
+```typescript
+// utils/tracking.ts
+export function captureClickId() {
+  if (typeof window === 'undefined') return
+
+  const params = new URLSearchParams(window.location.search)
+  const efTid = params.get('_ef_transaction_id')
+
+  if (efTid) {
+    // Guardar en cookie con expiración de 30 días
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString()
+    document.cookie = `ef_tid=${efTid}; path=/; expires=${expires}; SameSite=Lax`
+  }
+}
+
+export function getClickId(): string | null {
+  if (typeof window === 'undefined') return null
+
+  const match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/)
+  return match ? match[1] : null
+}
+```
+
+Luego llama `captureClickId()` en tu layout:
+
+```jsx
+import { useEffect } from 'react'
+import { captureClickId } from '@/utils/tracking'
+
+export default function Layout({ children }) {
+  useEffect(() => {
+    captureClickId()
+  }, [])
+
+  return <>{children}</>
+}
+```
+
+---
+
+## Tracking de conversiones
+
+### Método 1: Server-side (Recomendado)
+
+Dispara la conversión desde tu servidor o API route después de que la orden se confirme. Este es el método más confiable.
+
+#### Next.js API Route
+
+```typescript
+// pages/api/track-conversion.ts (o app/api/track-conversion/route.ts)
+import type { NextApiRequest, NextApiResponse } from 'next'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { clickId, orderTotal, orderId } = req.body
+
+  if (!clickId) {
+    return res.status(200).json({ tracked: false, reason: 'no click id' })
+  }
+
+  const params = new URLSearchParams({
+    verification_token: process.env.PROOF_TOKEN!,
+    transaction_id: clickId,
+    amount: String(orderTotal),
+    adv_event_id: orderId,
+    offer_id: process.env.PROOF_OFFER_ID!
+  })
+
+  const response = await fetch(
+    `https://www.track.proof.nilho.com/sdk/conversion?${params}`
+  )
+
+  const result = await response.text()
+  res.status(200).json({ tracked: true, result })
+}
+```
+
+#### Llamar desde el frontend (después del checkout)
+
+```typescript
+// En tu página de confirmación de orden
+import { useEffect } from 'react'
+import { getClickId } from '@/utils/tracking'
+
+export default function OrderConfirmation({ order }) {
+  useEffect(() => {
+    const clickId = getClickId()
+    if (clickId) {
+      fetch('/api/track-conversion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clickId,
+          orderTotal: order.total,
+          orderId: order.id
+        })
+      })
+    }
+  }, [order])
+
+  return <div>¡Gracias por tu compra!</div>
+}
+```
+
+<Tip>
+  Con este enfoque, tu **Verification Token** nunca se expone al frontend. Queda seguro en las variables de entorno del servidor.
+</Tip>
+
+### Método 2: Client-side (JavaScript SDK)
+
+Si no puedes implementar server-side, usa el SDK de Proof directamente:
+
+```jsx
+// En tu página de confirmación de orden
+import { useEffect } from 'react'
+
+export default function OrderConfirmation({ order }) {
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js'
+    script.onload = () => {
+      window.EF.conversion({
+        offer_id: parseInt(process.env.NEXT_PUBLIC_PROOF_OFFER_ID),
+        amount: order.total,
+        adv_event_id: order.id,
+        verification_token: process.env.NEXT_PUBLIC_PROOF_TOKEN
+      })
+    }
+    document.head.appendChild(script)
+  }, [order])
+
+  return <div>¡Gracias por tu compra!</div>
+}
+```
+
+<Warning>
+  Con este método, el Verification Token queda expuesto en el frontend. Si esto es una preocupación, usa el método server-side.
+</Warning>
+
+### Método 3: VTEX OMS Webhook + Postback S2S
+
+Si tu backend escucha webhooks de VTEX OMS, puedes disparar el postback directamente cuando VTEX confirma la orden.
+
+```typescript
+// Webhook handler para VTEX OMS
+async function handleVtexOrderWebhook(webhookData: any) {
+  const orderId = webhookData.OrderId
+
+  // Obtener detalles de la orden de VTEX
+  const order = await fetch(
+    `https://${VTEX_ACCOUNT}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`,
+    {
+      headers: {
+        'X-VTEX-API-AppKey': process.env.VTEX_APP_KEY!,
+        'X-VTEX-API-AppToken': process.env.VTEX_APP_TOKEN!
+      }
+    }
+  ).then(r => r.json())
+
+  // Extraer Click ID de marketingData
+  const clickId = order.marketingData?.utmCampaign
+  if (!clickId) return // No es tráfico de Proof
+
+  // Disparar postback
+  const params = new URLSearchParams({
+    verification_token: process.env.PROOF_TOKEN!,
+    transaction_id: clickId,
+    amount: String(order.value / 100), // VTEX usa centavos
+    adv_event_id: orderId,
+    offer_id: process.env.PROOF_OFFER_ID!
+  })
+
+  await fetch(`https://www.track.proof.nilho.com/sdk/conversion?${params}`)
+}
+```
+
+<Info>
+  Para que este método funcione, necesitas almacenar el `_ef_transaction_id` en el campo `utmCampaign` de `marketingData` durante el checkout. Esto se hace desde el frontend al momento de crear/actualizar el orderForm.
+</Info>
+
+---
+
+## Almacenar el Click ID en la orden de VTEX
+
+Para cualquier método que use el webhook de VTEX, necesitas pasar el Click ID al orderForm:
+
+```typescript
+// Durante el checkout, antes de completar la orden
+import { getClickId } from '@/utils/tracking'
+
+async function attachClickIdToOrder(orderFormId: string) {
+  const clickId = getClickId()
+  if (!clickId) return
+
+  await fetch(
+    `/api/checkout/pub/orderForm/${orderFormId}/attachments/marketingData`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        utmSource: 'proof',
+        utmCampaign: clickId
+      })
+    }
+  )
+}
+```
+
+---
+
+## Eventos personalizados
+
+Puedes trackear acciones intermedias (add to cart, checkout started) además de la conversión principal:
+
+```typescript
+// Tracking de Add to Cart
+function trackAddToCart(productPrice: number) {
+  const clickId = getClickId()
+  if (!clickId) return
+
+  fetch('/api/track-conversion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clickId,
+      orderTotal: productPrice,
+      orderId: `cart-${Date.now()}`,
+      eventId: 2  // ID del evento "Add to Cart" en Proof
+    })
+  })
+}
+```
+
+---
+
+## Probar la integración
+
+<Steps>
+  <Step title="Genera un tracking link de prueba en Proof" />
+  <Step title="Haz clic en el link y verifica que:">
+    - Llegas a tu sitio con `_ef_transaction_id` en la URL
+    - La cookie `ef_tid` se creó correctamente (inspector > Application > Cookies)
+  </Step>
+  <Step title="Completa una compra de prueba" />
+  <Step title="Verifica en tu servidor que el postback se envió (revisa logs)" />
+  <Step title="Confirma en Proof > Reports > Conversions que la conversión aparece correctamente" />
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="El Click ID se pierde durante la navegación">
+  Asegúrate de que la cookie `ef_tid` se está creando con `path=/` y una expiración adecuada. Si tu frontend hace SSR (Server Side Rendering), la cookie podría no estar disponible en el primer render del servidor.
+</Accordion>
+
+<Accordion title="La conversión server-side falla con timeout">
+  Verifica que tu servidor puede hacer solicitudes HTTP salientes a `track.proof.nilho.com`. Algunos entornos serverless tienen restricciones de red.
+</Accordion>
+
+<Accordion title="VTEX no almacena el utmCampaign">
+  Verifica que estás enviando los datos de `marketingData` antes de completar la orden. El endpoint `/attachments/marketingData` debe llamarse con el `orderFormId` correcto.
+</Accordion>
+
+<Accordion title="El monto no coincide">
+  VTEX maneja montos en centavos. Si el valor en VTEX es `15000000`, divídelo por 100 para obtener `150000.00` antes de enviarlo a Proof.
+</Accordion>
+
+<Snippet file="soporte.mdx" />

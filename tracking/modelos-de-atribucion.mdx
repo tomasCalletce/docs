@@ -1,0 +1,73 @@
+---
+title: "Modelos de atribución"
+description: "Entiende cómo Proof asigna crédito a los creadores: last touch y first touch."
+---
+
+## ¿Qué es la atribución?
+
+La **atribución** define cómo Proof decide qué creador recibe crédito (y pago) por una conversión. Es especialmente relevante cuando un usuario interactúa con múltiples creadores antes de comprar.
+
+**Ejemplo:** Un usuario hace clic en el link del Creador A el lunes, y luego en el link del Creador B el miércoles. Compra el jueves. ¿Quién recibe la comisión?
+
+---
+
+## Modelos disponibles
+
+### Last Touch (Último clic)
+
+<Info>
+  Este es el modelo **por defecto** en Proof.
+</Info>
+
+La conversión se atribuye al **último creador** cuyo link fue clickeado antes de la compra.
+
+Usando el ejemplo anterior: el usuario hizo clic en el link del Creador A el lunes y en el del Creador B el miércoles. Compra el jueves. **Creador B recibe la comisión** porque fue el último clic.
+
+**Cuándo usarlo:**
+- Es el estándar de la industria de creadores
+- Premia al creador que "cerró" la venta
+- Recomendado como modelo inicial
+
+### First Touch (Primer clic)
+
+La conversión se atribuye al **primer creador** que generó un clic, sin importar interacciones posteriores.
+
+Con el mismo ejemplo: el usuario hizo clic en el link del Creador A el lunes y en el del Creador B el miércoles. Compra el jueves. **Creador A recibe la comisión** porque fue el primer clic.
+
+**Cuándo usarlo:**
+- Cuando valoras más el **descubrimiento** del producto
+- Para campañas de awareness donde el primer contacto es el más importante
+- Menos común en creadores, pero útil para ciertos modelos de negocio
+
+---
+
+## Ventana de atribución
+
+La **ventana de atribución** define cuánto tiempo después de un clic puede ocurrir una conversión y aún ser atribuida.
+
+| Configuración | Valor típico |
+|---|---|
+| **Default** | 30 días |
+| **Mínimo** | 1 día |
+| **Máximo** | Configurable |
+
+**Ejemplo con ventana de 30 días:** Si el clic fue el 1 de marzo, una compra el 25 de marzo sí se atribuye (dentro de la ventana). Pero una compra el 5 de abril ya no (fuera de la ventana).
+
+<Info>
+  Ajusta la ventana de atribución según tu ciclo de venta. Si vendes productos de decisión rápida (moda, consumo), 7-14 días puede ser suficiente. Si vendes servicios B2B o productos de alto valor, considera 60-90 días.
+</Info>
+
+## Conversión única por clic
+
+Puedes configurar tu oferta para prevenir **conversiones duplicadas** por el mismo Click ID. Si está habilitado, solo la primera conversión reportada con un Click ID dado será procesada.
+
+Esto es útil para evitar reportes duplicados o errores en la implementación que disparen múltiples conversiones.
+
+## ¿Qué modelo elegir?
+
+| Escenario | Modelo recomendado |
+|---|---|
+| Creadores tradicionales (blogs, redes sociales) | **Last Touch** |
+| Campañas de awareness de largo plazo | **First Touch** |
+
+<Snippet file="soporte.mdx" />

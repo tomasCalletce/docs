@@ -1,0 +1,200 @@
+---
+title: "VTEX Legacy (Portal/CMS)"
+description: "Integra Proof con tu tienda VTEX Legacy usando el JavaScript SDK o postbacks S2S en el checkout clásico."
+---
+
+## Resumen
+
+**VTEX Legacy** (Portal/CMS) es la plataforma monolítica original de VTEX. Usa templates HTML renderizados del lado del servidor y el checkout clásico de VTEX.
+
+<Info>
+  La integración con VTEX Legacy se hace mediante el SDK de Proof o postbacks S2S. Tu technical account manager te guía en el proceso.
+</Info>
+
+## Prerrequisitos
+
+- Acceso al **CMS de VTEX** (para editar templates HTML)
+- Tu **Verification Token** de Proof
+- Tu **Offer ID** en Proof
+- Tu **Tracking Domain** (ej: `track.proof.nilho.com`)
+
+---
+
+## Método 1: JavaScript SDK (Recomendado para empezar)
+
+### Paso 1: Agregar el SDK a todas las páginas
+
+En el CMS de VTEX, edita el **template del header** que se incluye en todas las páginas. Agrega antes del cierre de `</head>`:
+
+```html
+<!-- Proof SDK - Proof by Nilho -->
+<script src="https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js"></script>
+<script>
+  EF.click({
+    offer_id: EF.urlParameter('oid'),
+    affiliate_id: EF.urlParameter('affid'),
+    transaction_id: EF.urlParameter('_ef_transaction_id')
+  });
+</script>
+```
+
+Esto hace dos cosas:
+1. Carga el SDK de Proof en cada página.
+2. Si el usuario llegó via un tracking link, captura el Click ID y lo guarda en una cookie.
+
+### Paso 2: Agregar el pixel de conversión al checkout
+
+VTEX Legacy permite agregar scripts a la página de **confirmación de orden** (Order Placed). Ve a:
+
+**CMS** > **Sites and Channels** > **tu sitio** > **Checkout** > **Order Placed**
+
+Agrega el siguiente script:
+
+```html
+<script src="https://www.track.proof.nilho.com/scripts/sdk/sdk/proof.js"></script>
+<script>
+  // VTEX expone los datos de la orden en el dataLayer
+  window.addEventListener('load', function() {
+    var orderData = window.dataLayer && window.dataLayer.find(function(item) {
+      return item.event === 'orderPlaced';
+    });
+
+    if (orderData) {
+      EF.conversion({
+        offer_id: TU_OFFER_ID,
+        amount: orderData.transactionTotal,
+        adv_event_id: orderData.transactionId,
+        verification_token: 'TU_VERIFICATION_TOKEN'
+      });
+    }
+  });
+</script>
+```
+
+<Warning>
+  Reemplaza `TU_OFFER_ID` y `TU_VERIFICATION_TOKEN` con tus valores reales de Proof.
+</Warning>
+
+### Datos disponibles en el dataLayer de VTEX
+
+El evento `orderPlaced` del dataLayer de VTEX incluye:
+
+| Campo | Descripción | Uso en Proof |
+|---|---|---|
+| `transactionId` | ID de la orden VTEX | `adv_event_id` (Order ID) |
+| `transactionTotal` | Total de la orden | `amount` |
+| `transactionProducts` | Array de productos | Para eventos personalizados |
+
+---
+
+## Método 2: Postback S2S (Más confiable)
+
+Si tienes acceso al backend o puedes configurar webhooks en VTEX, el postback S2S es la opción más robusta.
+
+### Paso 1: Capturar el Click ID
+
+Necesitas almacenar el `_ef_transaction_id` en los datos de la orden. En VTEX Legacy, puedes usar el campo `marketingData` de la orden:
+
+```javascript
+// En tu landing page o template global
+var efTid = new URLSearchParams(window.location.search).get('_ef_transaction_id');
+if (efTid) {
+  // Guarda en cookie para recuperar en el checkout
+  document.cookie = 'ef_tid=' + efTid + '; path=/; max-age=' + (30*24*60*60);
+}
+```
+
+### Paso 2: Pasar el Click ID al checkout
+
+En el checkout de VTEX, lee la cookie y pasa el valor en el campo `utmSource` o `utmiCampaign` de `marketingData`:
+
+```javascript
+// Durante el checkout, antes de completar la orden
+var efTid = getCookie('ef_tid');
+if (efTid) {
+  // Usa la API de VTEX para actualizar marketingData
+  fetch('/api/checkout/pub/orderForm/' + orderFormId + '/attachments/marketingData', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      utmSource: 'proof',
+      utmCampaign: efTid
+    })
+  });
+}
+
+function getCookie(name) {
+  var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+```
+
+### Paso 3: Configurar el webhook de VTEX
+
+Configura un webhook en VTEX para que notifique a tu servidor cuando se crea una orden:
+
+1. Ve a **VTEX Admin** > **Orders Management** > **Settings** > **Notification**.
+2. Configura un endpoint en tu servidor que reciba la notificación.
+3. Tu servidor lee la orden, extrae el Click ID de `marketingData.utmCampaign` y dispara el postback:
+
+```javascript
+// En tu servidor (Node.js ejemplo)
+app.post('/vtex-webhook/order-placed', async (req, res) => {
+  const orderId = req.body.OrderId;
+
+  // Obtener detalles de la orden via API de VTEX
+  const order = await fetch(`https://{account}.vtexcommercestable.com.br/api/oms/pvt/orders/${orderId}`, {
+    headers: { 'X-VTEX-API-AppKey': VTEX_APP_KEY, 'X-VTEX-API-AppToken': VTEX_APP_TOKEN }
+  }).then(r => r.json());
+
+  const efTid = order.marketingData?.utmCampaign;
+  if (!efTid) return res.sendStatus(200); // No es tráfico de Proof
+
+  // Disparar postback a Proof
+  const params = new URLSearchParams({
+    verification_token: PROOF_TOKEN,
+    transaction_id: efTid,
+    amount: order.value / 100, // VTEX usa centavos
+    adv_event_id: orderId,
+    offer_id: OFFER_ID
+  });
+
+  await fetch(`https://www.track.proof.nilho.com/sdk/conversion?${params}`);
+  res.sendStatus(200);
+});
+```
+
+<Info>
+  VTEX almacena los montos en **centavos**. Divide por 100 antes de enviar a Proof. Ejemplo: `150000` centavos = `1500.00` en la moneda local.
+</Info>
+
+---
+
+## Probar la integración
+
+<Steps>
+  <Step title="Genera un tracking link de prueba en Proof" />
+  <Step title="Haz clic en el link y verifica que llegas a tu tienda VTEX con el parámetro _ef_transaction_id en la URL" />
+  <Step title="Verifica que la cookie ef_tid se creó (inspector del navegador > Application > Cookies)" />
+  <Step title="Completa una compra de prueba" />
+  <Step title="Verifica en Proof > Reports > Conversions que la conversión aparece con el Order ID y monto correctos" />
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="El SDK no carga en mi tienda">
+  Verifica que el script está en el template correcto del CMS. En VTEX Legacy, los templates se encuentran en **CMS** > **Layout** > **CMS** > **HTML Templates**. Asegúrate de que el template que editaste es el que realmente usa tu tienda.
+</Accordion>
+
+<Accordion title="La conversión se dispara pero sin Click ID">
+  Esto puede pasar si la cookie expiró o fue bloqueada. Verifica que:
+  1. La cookie `ef_tid` está presente al momento de la compra.
+  2. No hay políticas de cookies en tu sitio que la eliminen.
+  3. El usuario no cambió de dispositivo entre el clic y la compra.
+</Accordion>
+
+<Accordion title="El monto de VTEX no coincide con Proof">
+  Recuerda que VTEX maneja montos en centavos. Si ves `15000000` en VTEX, eso son `150000.00` en tu moneda. Divide por 100 antes de enviar a Proof.
+</Accordion>
+
+<Snippet file="soporte.mdx" />

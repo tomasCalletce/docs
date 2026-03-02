@@ -1,0 +1,111 @@
+---
+title: "Crear una oferta"
+description: "Guía paso a paso para configurar tu primera oferta en Proof: configuración general, revenue, atribución y tracking."
+---
+
+## Antes de empezar
+
+Tu technical account manager te acompaña en todo este proceso. Si tienes dudas en cualquier paso, puedes apoyarte en tu account manager para configurar la oferta juntos.
+
+Asegúrate de tener:
+
+- Acceso a tu cuenta de marca en Proof
+- La URL de tu landing page lista
+- Tu modelo de pago definido (CPA, CPS, etc.)
+
+## Paso a paso
+
+<Steps>
+  <Step title="Configuración general">
+    En el dashboard de Proof, ve a **Offers** > **Create Offer**.
+
+    Completa los campos básicos:
+
+    | Campo | Descripción |
+    |---|---|
+    | **Offer Name** | Nombre descriptivo de tu oferta (ej: "Verano 2025 - 10% off") |
+    | **Offer URL** | URL de tu landing page (ej: `https://tutienda.com/promo`) |
+    | **Category** | Categoría de la oferta |
+    | **Description** | Descripción para los creadores (qué van a recomendar) |
+    | **Status** | Déjalo en **Active** para que sea visible |
+
+    <Tip>
+      Usa un nombre de oferta claro y descriptivo. Los creadores lo ven cuando buscan ofertas para recomendar.
+    </Tip>
+  </Step>
+
+  <Step title="Controles">
+    Configura restricciones y límites:
+
+    - **Caps (límites)**: Define un máximo de conversiones por día, semana o mes.
+    - **Programación**: Establece fecha de inicio y fin si es una campaña temporal.
+    - **Visibilidad**: Elige si la oferta es pública (visible en el marketplace) o privada (solo por invitación).
+  </Step>
+
+  <Step title="Revenue y Payout">
+    Define cuánto pagas y cuánto ganan los creadores:
+
+    **Revenue (tu costo):**
+    - Selecciona el tipo: **CPA** (monto fijo) o **CPS** (porcentaje). Ver [modelos de pago](/ofertas/que-es-una-oferta#modelos-de-pago).
+    - Ingresa el monto o porcentaje.
+
+    **Payout (comisión del creador):**
+    - Selecciona el tipo (puede ser diferente al revenue).
+    - Ingresa el monto o porcentaje.
+
+    **Ejemplo CPS:**
+    ```
+    Revenue: 12% del valor de la orden
+    Payout:   8% del valor de la orden
+    Margen:   4% para la red
+    ```
+
+    <Info>
+      Puedes configurar payouts diferentes por creador después de crear la oferta. Esto te permite dar mejores comisiones a tus top performers.
+    </Info>
+  </Step>
+
+  <Step title="Atribución">
+    Define cómo se atribuyen las conversiones:
+
+    | Configuración | Opciones |
+    |---|---|
+    | **Modelo de atribución** | Last Click (default) / First Click |
+    | **Ventana de atribución** | Días entre el clic y la conversión (default: 30 días) |
+    | **Conversión única por clic** | Prevenir conversiones duplicadas por el mismo Click ID |
+  </Step>
+
+  <Step title="Tracking">
+    Configura cómo se rastrea el tráfico:
+
+    - **Tracking Domain**: Selecciona tu dominio de tracking (ej: `track.proof.nilho.com`).
+    - **Parámetros de destino**: Decide si los parámetros del clic se agregan automáticamente a la URL de destino.
+    - **Click ID**: El parámetro `_ef_transaction_id` se agrega automáticamente a tu URL de destino.
+
+    **Tu URL de destino recibirá algo así:**
+    ```
+    https://tutienda.com/promo?_ef_transaction_id=abc123xyz
+    ```
+
+    Tu sitio necesita capturar y almacenar este parámetro para reportar conversiones. Consulta la sección de [integraciones](/integraciones/overview) para ver cómo hacerlo según tu plataforma.
+  </Step>
+
+  <Step title="Guardar y activar">
+    Revisa toda la configuración y haz clic en **Save**.
+
+    Una vez guardada, la oferta estará activa y los creadores podrán generar tracking links para empezar a recomendarla.
+  </Step>
+</Steps>
+
+## Después de crear la oferta
+
+<Columns cols={2}>
+  <Card title="Configurar el tracking" icon="code" href="/tracking/como-funciona">
+    Asegúrate de que tu sitio está reportando conversiones correctamente.
+  </Card>
+  <Card title="Integrar tu tienda" icon="plug" href="/integraciones/overview">
+    Conecta Shopify o VTEX para tracking automático.
+  </Card>
+</Columns>
+
+<Snippet file="soporte.mdx" />
