@@ -39,10 +39,20 @@
             "group": "Integraciones",
             "pages": [
               "integraciones/overview",
-              "integraciones/shopify",
-              "integraciones/vtex-legacy",
-              "integraciones/vtex-cloud",
-              "integraciones/vtex-headless"
+              {
+                "group": "Shopify",
+                "pages": [
+                  "integraciones/shopify"
+                ]
+              },
+              {
+                "group": "VTEX",
+                "pages": [
+                  "integraciones/vtex-legacy",
+                  "integraciones/vtex-cloud",
+                  "integraciones/vtex-headless"
+                ]
+              }
             ]
           }
         ]

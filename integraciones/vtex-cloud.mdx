@@ -229,17 +229,17 @@ const handleOrder = async (orderId) => {
   <Step title="Confirma la conversión en Proof > Reports > Conversions" />
 </Steps>
 
-## Troubleshooting
+## Solución de problemas
 
-<Accordion title="El pixel no se ejecuta en VTEX IO">
+<Accordion title="El pixel no se ejecuta">
   Verifica que la Pixel App está correctamente instalada con `vtex list`. Asegúrate de que el `manifest.json` tiene los builders y policies correctos.
 </Accordion>
 
-<Accordion title="El evento orderPlaced no se dispara">
+<Accordion title="El evento de orden completada no se dispara">
   En VTEX IO, los eventos se comunican via `postMessage`. Asegúrate de escuchar en `window.addEventListener('message', ...)` y no directamente en el dataLayer.
 </Accordion>
 
-<Accordion title="Conflictos con otras Pixel Apps">
+<Accordion title="Conflictos con otras apps de tracking">
   Si tienes múltiples pixel apps, verifica que no hay conflictos de scripts. Cada pixel app se ejecuta en un iframe separado en VTEX IO.
 </Accordion>
 

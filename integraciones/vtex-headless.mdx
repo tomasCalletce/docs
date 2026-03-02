@@ -5,7 +5,7 @@ description: "Integra Proof con tu frontend desacoplado de VTEX: FastStore, Next
 
 ## Resumen
 
-**VTEX Headless** es una arquitectura donde el frontend es una aplicación separada (React, Next.js, FastStore, Gatsby, etc.) que se comunica con VTEX a través de APIs. Tienes control total del código, lo que permite integrar Proof de forma flexible.
+**VTEX Headless** es una arquitectura donde el frontend es una aplicación separada que se comunica con VTEX a través de APIs. Tienes control total del código, lo que permite integrar Proof de forma flexible.
 
 <Info>
   En arquitecturas headless tienes control total del código, lo que permite integrar Proof de forma flexible via SDK o postback S2S. Tu technical account manager te ayuda con la implementación.
@@ -299,7 +299,7 @@ function trackAddToCart(productPrice: number) {
   <Step title="Confirma en Proof > Reports > Conversions que la conversión aparece correctamente" />
 </Steps>
 
-## Troubleshooting
+## Solución de problemas
 
 <Accordion title="El Click ID se pierde durante la navegación">
   Asegúrate de que la cookie `ef_tid` se está creando con `path=/` y una expiración adecuada. Si tu frontend hace SSR (Server Side Rendering), la cookie podría no estar disponible en el primer render del servidor.
