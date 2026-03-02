@@ -33,36 +33,30 @@ Tu **servidor** envía una solicitud HTTP directamente a Proof cuando ocurre una
 ### Endpoint
 
 ```bash
-curl "https://www.track.proof.nilho.com/sdk/conversion?\
-verification_token=TU_TOKEN\
-&transaction_id=CLICK_ID\
+curl "https://www.track.proof.nilho.com/?\
+nid=3935\
+&transaction_id=TRANSACTION_ID\
 &amount=150000\
-&adv_event_id=ORDER-12345\
-&offer_id=100"
+&adv_event_id=ORDER-12345"
 ```
 
 ### Parámetros
 
 | Parámetro | Requerido | Descripción |
 |---|---|---|
-| `verification_token` | Sí | Token único de tu cuenta en Proof. Lo encuentras en **Company Settings** > **Verification Token**. Identifica a tu marca cuando reportas conversiones. |
-| `transaction_id` | Sí* | El Click ID que Proof generó cuando el usuario hizo clic en el tracking link. Se pasa como `_ef_transaction_id` en la URL de tu sitio. Es lo que conecta el clic con la venta. |
+| `nid` | Sí | ID de tu red en Proof. Tu technical account manager te lo proporciona. |
+| `transaction_id` | Sí | El Transaction ID que Proof generó cuando el usuario hizo clic en el tracking link. Se pasa como `_ef_transaction_id` en la URL de tu sitio. Es lo que conecta el clic con la venta. |
 | `amount` | No | Valor total de la venta en tu moneda. Requerido si tu oferta usa modelo CPS (porcentaje sobre la venta). Para CPA (monto fijo) no es necesario. |
 | `adv_event_id` | Recomendado | Tu número de orden o ID de transacción interno. Proof lo guarda para que puedas reconciliar las conversiones con tus registros. |
-| `offer_id` | Sí | El ID numérico de tu oferta en Proof. Lo encuentras en el dashboard al ver los detalles de la oferta. |
-
-| `event_id` | No | ID del evento personalizado (add to cart, checkout started, etc.). Solo necesario si quieres reportar acciones adicionales a la venta principal. |
-
 
 ### Ejemplo: conversión con monto y Order ID
 
 ```bash
-curl "https://www.track.proof.nilho.com/sdk/conversion?\
-verification_token=abc123\
+curl "https://www.track.proof.nilho.com/?\
+nid=3935\
 &transaction_id=ef_tx_9876\
 &amount=250000\
-&adv_event_id=ORD-2026-0042\
-&offer_id=15"
+&adv_event_id=ORD-2026-0042"
 ```
 
 
@@ -73,13 +67,12 @@ Proof protege contra conversiones duplicadas de forma automática. Si un mismo T
 
 ## Eventos personalizados
 
-Además de la conversión principal (venta), puedes reportar eventos intermedios como add to cart o checkout started. Agrega el parámetro `event_id` con el ID del evento configurado en tu oferta:
+Además de la conversión principal (venta), puedes reportar eventos intermedios como agregar al carrito o inicio de checkout. Agrega el parámetro `event_id` con el ID del evento configurado en tu oferta:
 
 ```bash
-curl "https://www.track.proof.nilho.com/sdk/conversion?\
-verification_token=TU_TOKEN\
-&transaction_id=CLICK_ID\
-&offer_id=100\
+curl "https://www.track.proof.nilho.com/?\
+nid=3935\
+&transaction_id=TRANSACTION_ID\
 &event_id=2"
 ```
 
