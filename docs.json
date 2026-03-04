@@ -17,42 +17,64 @@
             "group": "Inicio",
             "pages": [
               "index",
-              "conceptos-basicos"
+              "conceptos-basicos",
+              "como-funciona-proof"
             ]
           },
           {
-            "group": "Ofertas",
+            "group": "Marcas",
             "pages": [
-              "ofertas/que-es-una-oferta",
-              "ofertas/crear-una-oferta"
-            ]
-          },
-          {
-            "group": "Tracking",
-            "pages": [
-              "tracking/como-funciona",
-              "tracking/metodos-de-conversion",
-              "tracking/modelos-de-atribucion"
-            ]
-          },
-          {
-            "group": "Integraciones",
-            "pages": [
-              "integraciones/overview",
+              "como-configurar-tu-programa-y-oferta",
+              "f",
+              "como-se-genera-y-paga-tu-factura",
+              "cambios",
+              "ao",
+              "d",
               {
-                "group": "Shopify",
+                "group": "Ofertas",
                 "pages": [
-                  "integraciones/shopify"
+                  "ofertas/que-es-una-oferta",
+                  "ofertas/crear-una-oferta"
                 ]
               },
               {
-                "group": "VTEX",
+                "group": "Tracking",
                 "pages": [
-                  "integraciones/vtex-legacy",
-                  "integraciones/vtex-cloud",
-                  "integraciones/vtex-headless"
+                  "tracking/como-funciona",
+                  "tracking/metodos-de-conversion",
+                  "tracking/modelos-de-atribucion"
+                ]
+              },
+              {
+                "group": "Integraciones",
+                "pages": [
+                  "integraciones/overview",
+                  {
+                    "group": "Shopify",
+                    "pages": [
+                      "integraciones/shopify"
+                    ]
+                  },
+                  {
+                    "group": "VTEX",
+                    "pages": [
+                      "integraciones/vtex-legacy",
+                      "integraciones/vtex-cloud",
+                      "integraciones/vtex-headless"
+                    ]
+                  }
                 ]
               }
+            ]
+          },
+          {
+            "group": "Creadores",
+            "pages": [
+              "proof-101",
+              "tus",
+              "tus-comisiones-y-como-verals",
+              "como-y-cuando-te-pagan",
+              "que-hace-que-una-conversion-sea-valida"
             ]
           }
         ]
