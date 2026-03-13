@@ -5,7 +5,11 @@ description: "Integra Proof con tu tienda VTEX IO. Tu technical account manager 
 
 ## Resumen
 
-**VTEX IO** (también llamado Store Framework o VTEX Cloud) es la arquitectura moderna de VTEX. Usa un sistema de **apps** y componentes. La integración con Proof se hace a través de una **Pixel App** para capturar el Transaction ID, y un postback S2S para reportar las conversiones.
+**VTEX IO** (también llamado Store Framework o VTEX Cloud) es la arquitectura moderna de VTEX. Usa un sistema de **apps** y componentes. La integración con Proof tiene 3 pasos:
+
+1. Capturar el `_ef_transaction_id` de la URL y guardarlo en una cookie.
+2. Adjuntar ese valor a la orden de VTEX durante el checkout.
+3. Enviar un postback S2S a Proof cuando se completa la orden.
 
 <Info>
   Tu technical account manager te guía en todo el proceso de integración. Los ejemplos de código en esta página son referencia para tu equipo técnico.
@@ -20,18 +24,41 @@ description: "Integra Proof con tu tienda VTEX IO. Tu technical account manager 
 
 ---
 
-## Paso 1: Capturar el Transaction ID con una Pixel App
+## Paso 1: Capturar el Transaction ID
 
-Una Pixel App en VTEX IO es un componente que se ejecuta en todas las páginas. Cuando un usuario llega desde un tracking link, la Pixel App captura el **Transaction ID** de la URL y lo guarda en una cookie.
+Cuando un usuario hace clic en un tracking link, Proof genera un `_ef_transaction_id` único y redirige al usuario a tu tienda con ese parámetro en la URL:
+
+```
+https://tutienda.com/landing?_ef_transaction_id=abc123xyz789
+```
+
+<Warning>
+  El `_ef_transaction_id` solo existe en la URL de la **primera página** en la que aterriza el usuario. Si navega a cualquier otra página, el parámetro se pierde de la URL. Por eso debes capturarlo inmediatamente y guardarlo en una cookie.
+</Warning>
+
+### El script de captura
+
+```html
+<script>
+  // Capturar el Transaction ID del tracking link y guardarlo en una cookie
+  var params = new URLSearchParams(window.location.search);
+  var efTid = params.get('_ef_transaction_id');
+  if (efTid) {
+    document.cookie = 'ef_tid=' + efTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
+  }
+</script>
+```
+
+Este script se ejecuta en cada página. Si el usuario llegó desde un tracking link, captura el Transaction ID y lo guarda en una cookie `ef_tid` con expiración de 30 días.
 
 ### Crear la Pixel App
+
+Crea una Pixel App de VTEX IO. Es un componente que se ejecuta en todas las páginas.
 
 ```bash
 vtex init
 # Selecciona "pixel" como tipo de app
 ```
-
-### Configurar el manifest
 
 En `manifest.json`:
 
@@ -46,22 +73,7 @@ En `manifest.json`:
 }
 ```
 
-### Implementar la captura
-
-En `pixel/head.html`, agrega el script que captura el Transaction ID:
-
-```html
-<script>
-  // Capturar el Transaction ID del tracking link y guardarlo en una cookie
-  var params = new URLSearchParams(window.location.search);
-  var efTid = params.get('_ef_transaction_id');
-  if (efTid) {
-    document.cookie = 'ef_tid=' + efTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
-  }
-</script>
-```
-
-### Instalar la Pixel App
+Agrega el script de captura en `pixel/head.html`.
 
 ```bash
 # Desarrollo local
@@ -72,19 +84,28 @@ vtex publish
 vtex install tuvendor.proof-tracking@0.1.0
 ```
 
+### Verificar que funciona
+
+1. Abre tu tienda en modo incógnito con `?_ef_transaction_id=test123` en la URL.
+2. Abre **DevTools** > **Application** > **Cookies**.
+3. Confirma que existe una cookie `ef_tid` con valor `test123`.
+4. Navega a otra página de tu tienda y verifica que la cookie sigue presente.
+
 ---
 
 ## Paso 2: Guardar el Transaction ID en la orden
 
-Para que el postback funcione, el Transaction ID debe quedar guardado en los datos de la orden de VTEX. En VTEX IO, esto se hace actualizando el `marketingData` del `orderForm` durante el checkout.
+Para que el postback funcione, el Transaction ID debe quedar guardado en los datos de la orden de VTEX. Esto se hace actualizando el `marketingData` del `orderForm` durante el checkout.
 
 En la Pixel App o en un componente del checkout, lee la cookie y pásala al `orderForm` antes de que el usuario complete la compra:
 
 ```javascript
+// Leer el Transaction ID de la cookie
 var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
 var efTid = match ? match[1] : null;
 
 if (efTid) {
+  // Adjuntarlo al marketingData de la orden
   fetch('/api/checkout/pub/orderForm/' + orderFormId + '/attachments/marketingData', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -96,55 +117,96 @@ if (efTid) {
 }
 ```
 
+### Sobre el `orderFormId`
+
+La forma de obtener el `orderFormId` puede variar según tu configuración de VTEX IO. Estas son las opciones más comunes:
+
+| Método | Cuándo aplica |
+|---|---|
+| `vtexjs.checkout.orderFormId` | VTEX Legacy y algunos setups de IO con `vtexjs` disponible |
+| `window.__RUNTIME__.orderFormId` | Algunos setups de VTEX IO que exponen el runtime |
+| `POST /api/checkout/pub/orderForm` | Universal. Crea o recupera el orderForm activo |
+
 <Warning>
-  La forma de obtener el `orderFormId` puede variar según tu configuración de VTEX IO. Tu technical account manager te ayuda a identificar el mejor punto para ejecutar este código en tu checkout.
+  Tu technical account manager te ayuda a identificar cuál método funciona en tu checkout específico.
 </Warning>
+
+### Cuándo ejecutar este código
+
+Este código debe ejecutarse durante el checkout, **antes** de que el usuario complete la compra. El momento exacto depende de tu flujo de checkout. Lo importante es que el `marketingData` quede guardado en el `orderForm` antes de que se cree la orden.
 
 ---
 
 ## Paso 3: Reportar la conversión (Postback S2S)
 
-Configura un webhook en VTEX para que notifique a tu servidor cuando se completa una orden. Tu servidor lee la orden, extrae el Transaction ID y envía la conversión a Proof.
+Cuando se completa una orden, tu servidor envía la conversión a Proof. El postback es una solicitud **GET** con parámetros en la URL.
 
-### Configurar el webhook
+<Warning>
+  El postback es un **GET request**, no un POST. Los parámetros van en la URL, no en el body.
+</Warning>
+
+### Configurar el webhook de VTEX
 
 1. Ve a **VTEX Admin** > **Orders Management** > **Settings** > **Notification**.
 2. Configura un endpoint en tu servidor que reciba la notificación de órdenes nuevas.
 
+### URL del postback
+
+<Info>
+  Tu technical account manager te proporciona la URL exacta del postback para tu integración. La URL del ejemplo a continuación es solo de referencia.
+</Info>
+
+### Parámetros
+
+| Parámetro | Requerido | Descripción |
+|---|---|---|
+| `nid` | Sí | ID de tu red en Proof. Tu technical account manager te lo proporciona. |
+| `transaction_id` | Sí | El Transaction ID capturado en el Paso 1. Se extrae de `marketingData.utmCampaign` de la orden. |
+| `amount` | Depende | Requerido si tu oferta usa modelo **CPS** (porcentaje sobre la venta). Para ofertas **CPA** (monto fijo por conversión) no es necesario. |
+| `adv_event_id` | Recomendado | Tu número de orden en VTEX. Proof lo guarda para reconciliación. |
+
 ### Disparar el postback desde tu servidor
 
 ```javascript
-// Disparar postback a Proof con los datos de la orden
+// Cuando VTEX notifica una nueva orden, extraer el Transaction ID y disparar el postback
+const efTid = order.marketingData.utmCampaign;
+const orderTotal = order.value / 100; // VTEX guarda los montos en centavos
+
 const params = new URLSearchParams({
   nid: '3935',
-  transaction_id: efTid,        // El Transaction ID guardado en marketingData.utmCampaign
-  amount: String(orderTotal),    // Monto de la venta
-  adv_event_id: orderId          // Número de orden
+  transaction_id: efTid,
+  amount: String(orderTotal),
+  adv_event_id: order.orderId
 });
 
+// GET request a la URL de postback de Proof
 await fetch(`https://www.track.proof.nilho.com/?${params}`);
 ```
 
-<Info>
-  Recuerda que VTEX almacena los montos en **centavos**. Divide por 100 antes de enviar el `amount` a Proof.
-</Info>
+<Warning>
+  VTEX almacena los montos en **centavos**. Un pedido de $1,500.00 se almacena como `150000`. Divide por 100 antes de enviar el `amount` a Proof.
+</Warning>
+
+### Protección contra duplicados
+
+Proof rechaza automáticamente valores de `transaction_id` duplicados. Esto significa que puedes implementar reintentos en tu servidor si el primer intento falla, sin preocuparte por generar conversiones dobles.
 
 ---
 
 ## Probar la integración
 
 <Steps>
-  <Step title="Verifica la Pixel App">
-    Usa `vtex link` para probar localmente. Verifica que el script de captura funciona correctamente en todas las páginas.
+  <Step title="Verifica la captura del Transaction ID">
+    Abre tu tienda con `?_ef_transaction_id=test123` en la URL. Verifica en **DevTools** > **Application** > **Cookies** que la cookie `ef_tid` existe con el valor correcto. Navega a otras páginas y confirma que la cookie persiste.
   </Step>
   <Step title="Genera un tracking link de prueba en Proof">
     Crea un tracking link con un creador de prueba para tu oferta.
   </Step>
   <Step title="Haz clic en el tracking link">
-    Abre el link en un navegador en modo incógnito. Verifica que llegas a tu tienda VTEX.
+    Abre el link en un navegador en modo incógnito. Verifica que llegas a tu tienda VTEX y que la cookie `ef_tid` se crea.
   </Step>
   <Step title="Completa una compra de prueba">
-    Completa el checkout con un producto de prueba.
+    Completa el checkout con un producto de prueba. Verifica que el Transaction ID queda en `marketingData.utmCampaign` de la orden.
   </Step>
   <Step title="Verifica en Proof">
     En **Reports** > **Conversions**, confirma que la conversión aparece con el monto y número de orden correctos.
@@ -153,18 +215,16 @@ await fetch(`https://www.track.proof.nilho.com/?${params}`);
 
 ## Solución de problemas
 
+| Problema | Qué verificar |
+|---|---|
+| La cookie `ef_tid` no se crea | Confirma que el script de captura se ejecuta en todas las páginas. Revisa que la URL contiene `_ef_transaction_id` como parámetro. |
+| El `_ef_transaction_id` no aparece en la URL | El usuario no llegó desde un tracking link de Proof. Genera un tracking link de prueba en tu dashboard. |
+| Las conversiones no aparecen en Proof | 1. Verifica que el webhook de VTEX está apuntando a tu servidor. 2. Confirma que `marketingData.utmCampaign` tiene el Transaction ID. 3. Revisa que el postback es un GET (no POST). 4. Revisa los logs de tu servidor. |
+| El monto no coincide | VTEX almacena montos en centavos. Divide por 100 antes de enviar a Proof. |
+| Proof rechaza la conversión como duplicada | Es el comportamiento esperado. Cada `transaction_id` solo puede tener una conversión. |
+
 <Accordion title="La Pixel App no se ejecuta">
   Verifica que la app está correctamente instalada con `vtex list`. Asegúrate de que el `manifest.json` tiene los builders correctos.
-</Accordion>
-
-<Accordion title="Las conversiones no aparecen en Proof">
-  1. Verifica que el webhook de VTEX está configurado y apuntando a tu servidor.
-  2. Confirma que el Transaction ID se está guardando en `marketingData.utmCampaign` de la orden.
-  3. Revisa los logs de tu servidor para confirmar que el postback se está enviando.
-</Accordion>
-
-<Accordion title="El monto no coincide">
-  VTEX maneja montos en centavos. Si el valor en VTEX es `15000000`, divídelo por 100 para obtener `150000.00` antes de enviarlo a Proof.
 </Accordion>
 
 <Snippet file="soporte.mdx" />
