@@ -22,7 +22,7 @@ description: "Integra Proof con tu tienda VTEX Legacy. Tu technical account mana
 
 ## Paso 1: Capturar el Transaction ID
 
-Cuando un usuario llega desde un tracking link, la URL contiene un parámetro `_ef_transaction_id` que identifica al creador. Necesitas capturarlo y guardarlo en una cookie para no perderlo cuando el usuario navega tu tienda.
+Cuando un usuario llega desde un tracking link, la URL contiene un parámetro `tid` que identifica al creador. Necesitas capturarlo y guardarlo en una cookie para no perderlo cuando el usuario navega tu tienda.
 
 En el CMS de VTEX, edita el **template del header** que se incluye en todas las páginas. Agrega antes del cierre de `</head>`:
 
@@ -30,9 +30,9 @@ En el CMS de VTEX, edita el **template del header** que se incluye en todas las 
 <script>
   // Capturar el Transaction ID del tracking link y guardarlo en una cookie
   var params = new URLSearchParams(window.location.search);
-  var efTid = params.get('_ef_transaction_id');
+  var efTid = params.get('tid');
   if (efTid) {
-    document.cookie = 'ef_tid=' + efTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
+    document.cookie = 'proof_tid=' + efTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
   }
 </script>
 ```
@@ -50,7 +50,7 @@ En el checkout de VTEX, agrega un script que lea la cookie y la pase al `orderFo
 ```html
 <script>
   // Leer el Transaction ID de la cookie
-  var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
+  var match = document.cookie.match(/(?:^|; )proof_tid=([^;]+)/);
   var efTid = match ? match[1] : null;
 
   if (efTid) {
@@ -132,7 +132,7 @@ await fetch(`https://www.track.proof.nilho.com/?${params}`);
 </Accordion>
 
 <Accordion title="El Transaction ID no se guarda en la orden">
-  Verifica que el script del checkout está leyendo la cookie `ef_tid` correctamente y que el `orderFormId` es el correcto. Tu technical account manager puede ayudarte a depurar esto.
+  Verifica que el script del checkout está leyendo la cookie `proof_tid` correctamente y que el `orderFormId` es el correcto. Tu technical account manager puede ayudarte a depurar esto.
 </Accordion>
 
 <Accordion title="El monto no coincide">

@@ -22,17 +22,17 @@ description: "Integra Proof con tu frontend desacoplado de VTEX. Tu technical ac
 
 ## Paso 1: Capturar el Transaction ID
 
-Cuando un usuario llega desde un tracking link, la URL contiene un parámetro `_ef_transaction_id` que identifica al creador. Necesitas capturarlo y guardarlo en una cookie.
+Cuando un usuario llega desde un tracking link, la URL contiene un parámetro `tid` que identifica al creador. Necesitas capturarlo y guardarlo en una cookie.
 
 En tu layout principal (el componente que carga en todas las páginas), agrega la lógica para capturar el parámetro:
 
 ```javascript
 // Capturar el Transaction ID del tracking link y guardarlo en una cookie
 var params = new URLSearchParams(window.location.search);
-var efTid = params.get('_ef_transaction_id');
+var efTid = params.get('tid');
 if (efTid) {
   var expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = 'ef_tid=' + efTid + '; path=/; expires=' + expires;
+  document.cookie = 'proof_tid=' + efTid + '; path=/; expires=' + expires;
 }
 ```
 
@@ -46,7 +46,7 @@ Para que el postback funcione, el Transaction ID debe quedar guardado en los dat
 
 ```javascript
 // Durante el checkout, antes de completar la orden
-var match = document.cookie.match(/(?:^|; )ef_tid=([^;]+)/);
+var match = document.cookie.match(/(?:^|; )proof_tid=([^;]+)/);
 var efTid = match ? match[1] : null;
 
 if (efTid) {
@@ -119,7 +119,7 @@ await fetch(`https://www.track.proof.nilho.com/?${params}`);
 ## Solución de problemas
 
 <Accordion title="El Transaction ID se pierde durante la navegación">
-  Asegúrate de que la cookie `ef_tid` se está creando correctamente. Si tu frontend usa Server Side Rendering, la cookie podría no estar disponible en el primer render del servidor. El script de captura debe ejecutarse del lado del cliente.
+  Asegúrate de que la cookie `proof_tid` se está creando correctamente. Si tu frontend usa Server Side Rendering, la cookie podría no estar disponible en el primer render del servidor. El script de captura debe ejecutarse del lado del cliente.
 </Accordion>
 
 <Accordion title="Las conversiones no aparecen en Proof">
