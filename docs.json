@@ -62,7 +62,8 @@
                       "integraciones/vtex-cloud",
                       "integraciones/vtex-headless"
                     ]
-                  }
+                  },
+                  "integraciones/woocommerce-hosted-payment"
                 ]
               }
             ]

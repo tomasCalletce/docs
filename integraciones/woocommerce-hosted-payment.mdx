@@ -1,0 +1,171 @@
+---
+title: "WooCommerce Avanzado"
+sidebarTitle: "WooCommerce Avanzado"
+description: "Integra Proof cuando WooCommerce no es la fuente de verdad para confirmar la orden. Tu technical account manager te acompaña en el proceso."
+---
+
+## Cuándo usar esta guía
+
+Esta guía aplica cuando **WooCommerce no es la fuente de verdad** para confirmar la orden. Es decir, cuando el pago no se confirma dentro de WooCommerce sino en tu propio backend, y por lo tanto los hooks nativos de WooCommerce no son suficientes para saber cuándo disparar la conversión.
+
+Algunos casos comunes:
+
+- Tu checkout redirige a un **enlace de pago externo** (hosted payment link) administrado por tu sistema o un proveedor.
+- Tu pasarela de pago confirma el pago de forma **asíncrona** vía webhook a tu backend, no a WooCommerce.
+- Tu backend procesa la orden en sistemas adicionales (ERP, antifraude, validación manual) antes de darla por confirmada.
+
+En todos estos casos, **el postback a Proof debe dispararse desde tu backend**, no desde WooCommerce.
+
+### Conceptos clave
+
+Esta guía asume que estás familiarizado con dos conceptos. Si no, revísalos primero:
+
+- **[Transaction ID](/tracking/como-funciona) (`tid`)**: identificador único que Proof genera cada vez que alguien hace clic en un tracking link. Viaja en la URL hasta tu tienda y es lo que conecta el clic con la venta.
+- **[Postback S2S](/tracking/metodos-de-conversion)**: solicitud HTTP `GET` que tu servidor envía a Proof cuando se confirma una venta. Es el método estándar y más confiable de reportar conversiones. No depende del navegador del usuario ni de cookies.
+
+### El flujo
+
+1. El usuario llega a tu tienda WooCommerce desde un tracking link de Proof (con `?tid=...` en la URL).
+2. El usuario hace clic en **Pagar**; WooCommerce crea la orden con el `tid` guardado en sus metadatos.
+3. Tu backend confirma el pago.
+4. Tu backend dispara el postback a Proof con el `tid`, el monto y tu número de orden.
+
+<Info>
+  Tu technical account manager te guía en todo el proceso. Los ejemplos de código en esta página son referencia para tu equipo técnico.
+</Info>
+
+## Paso 1: Capturar el Transaction ID en WooCommerce
+
+Cuando el usuario hace clic en un tracking link, Proof genera un `tid` único y redirige al usuario a tu tienda con ese parámetro en la URL:
+
+```
+https://tutienda.com/?tid=abc123xyz789
+```
+
+<Warning>
+  El `tid` solo existe en la URL de la **primera página** en la que aterriza el usuario. Captúralo de inmediato y guárdalo en una cookie.
+</Warning>
+
+Agrega esto a `functions.php` (preferiblemente un **child theme**) o usa un plugin como **Header and Footer Scripts**:
+
+```php
+add_action('wp_head', 'proof_capture_tid');
+function proof_capture_tid() {
+  ?>
+  <script>
+    var params = new URLSearchParams(window.location.search);
+    var proofTid = params.get('tid');
+    if (proofTid) {
+      document.cookie = 'proof_tid=' + proofTid + '; path=/; max-age=' + (30 * 24 * 60 * 60);
+    }
+  </script>
+  <?php
+}
+```
+
+---
+
+## Paso 2: Guardar el `tid` en la orden de WooCommerce
+
+Cuando WooCommerce crea la orden (todavía en estado `pending`), lee la cookie y guarda el `tid` como metadato. Así sobrevive a cualquier paso intermedio antes de la confirmación del pago.
+
+```php
+add_action('woocommerce_checkout_create_order', 'proof_save_tid_to_order', 10, 2);
+function proof_save_tid_to_order($order, $data) {
+  if (!empty($_COOKIE['proof_tid'])) {
+    $proof_tid = sanitize_text_field($_COOKIE['proof_tid']);
+    $order->update_meta_data('_proof_tid', $proof_tid);
+  }
+}
+```
+
+<Info>
+  El prefijo `_` en `_proof_tid` hace que el metadato sea **privado**: no se muestra en la interfaz de edición de órdenes ni se expone al cliente.
+</Info>
+
+---
+
+## Paso 3: Enviar el `tid` y el monto a tu backend
+
+Tu backend necesita estos tres valores para poder reportar la conversión a Proof:
+
+| Valor | Origen |
+|---|---|
+| `tid` | El metadato `_proof_tid` que guardaste en la orden en el Paso 2 |
+| `amount` | El total de la orden (`$order->get_total()`) |
+| `order_id` | El número de orden de WooCommerce (`$order->get_id()`) |
+
+Cómo hagas llegar estos valores a tu backend depende de tu arquitectura: puedes pasarlos como parámetros en la URL de redirección al sistema de pago, exponerlos en un endpoint, o consultarlos directamente desde tu backend via la REST API de WooCommerce. Tu technical account manager te ayuda a definir el mejor método según tu pasarela.
+
+---
+
+## Paso 4: Disparar el postback desde tu backend
+
+Cuando tu backend confirma que el pago se completó, dispara el postback a Proof con el `tid` y el monto.
+
+### Parámetros
+
+| Parámetro | Requerido | Descripción |
+|---|---|---|
+| `nid` | Sí | Tu ID de marca en Proof. Tu technical account manager te lo proporciona. |
+| `transaction_id` | Sí | El `tid` guardado en la orden. |
+| `amount` | Depende | Requerido si tu oferta usa modelo **CPS**. Para ofertas **CPA** no es necesario. |
+| `adv_event_id` | Recomendado | El `order_id` de WooCommerce. Proof lo guarda para reconciliación. |
+
+<Warning>
+  El postback es un **GET request**, no un POST. Los parámetros van en la URL, no en el body.
+</Warning>
+
+### Formato
+
+```
+GET https://www.track.proof.nilho.com/?nid={tu_nid}&transaction_id={tid}&amount={amount}&adv_event_id={order_id}
+```
+
+### Ejemplo
+
+Tu backend puede estar escrito en cualquier lenguaje. El siguiente ejemplo está en JavaScript, pero la lógica es la misma en cualquier lenguaje: armar la URL con los parámetros y hacer un `GET`.
+
+```javascript
+// Cuando tu backend confirma el pago, dispara el postback
+const params = new URLSearchParams({
+  nid: 'TU_NID',                 // Tu ID de marca en Proof
+  transaction_id: tid,           // El tid guardado en la orden
+  amount: String(orderTotal),    // Monto de la venta
+  adv_event_id: String(orderId)  // Número de orden en WooCommerce
+});
+
+// GET request a la URL de postback de Proof
+await fetch(`https://www.track.proof.nilho.com/?${params}`);
+```
+
+### Protección contra duplicados
+
+Proof rechaza automáticamente valores de `transaction_id` duplicados. Si tu backend reintenta el postback, solo la primera llamada genera la conversión. Puedes implementar reintentos sin generar conversiones dobles.
+
+---
+
+## Probar la integración
+
+<Steps>
+  <Step title="Verifica la captura del Transaction ID">
+    Abre tu tienda con `?tid=test123` en la URL. Verifica en **DevTools** > **Application** > **Cookies** que la cookie `proof_tid` existe con el valor correcto.
+  </Step>
+  <Step title="Genera un tracking link de prueba en Proof">
+    Crea un tracking link con un creador de prueba para tu oferta.
+  </Step>
+  <Step title="Inicia un checkout">
+    Agrega un producto al carrito y comienza el checkout. Verifica que la orden se crea en WooCommerce con el metadato `_proof_tid`.
+  </Step>
+  <Step title="Confirma que tu backend recibe el tid">
+    Verifica que tu backend tiene el `tid`, el `order_id` y el monto cuando confirma el pago.
+  </Step>
+  <Step title="Simula el pago exitoso">
+    Completa el pago en tu sistema. Verifica en los logs de tu backend que el postback a Proof se ejecutó.
+  </Step>
+  <Step title="Verifica en Proof">
+    En **Reports** > **Conversions**, confirma que la conversión aparece con el monto y número de orden correctos.
+  </Step>
+</Steps>
+
+<Snippet file="soporte.mdx" />
